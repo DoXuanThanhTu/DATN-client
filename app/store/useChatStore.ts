@@ -44,7 +44,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   connectSocket: (userId) => {
     if (get().socket?.connected) return;
-    const socket = io("http://localhost:5000", { query: { userId } });
+    const socket = io(process.env.NEXT_PUBLIC_SERVER, { query: { userId } });
 
     socket.on("getOnlineUsers", (users: string[]) =>
       set({ onlineUsers: users }),
