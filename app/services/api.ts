@@ -4,8 +4,8 @@ import { useAuthStore } from "../store/useAuthStore";
 const api = axios.create({
   baseURL:
     process.env.NEXT_PUBLIC_MODE === "development"
-      ? process.env.NEXT_PUBLIC_SERVER_URL_DEVELOPMENT + "/api/"
-      : process.env.NEXT_PUBLIC_SERVER_URL_PRODUCTION + "/api/",
+      ? process.env.NEXT_PUBLIC_SERVER_URL_DEVELOPMENT
+      : process.env.NEXT_PUBLIC_SERVER_URL_PRODUCTION,
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
