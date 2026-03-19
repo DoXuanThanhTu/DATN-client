@@ -1,5 +1,13 @@
 @import "tailwindcss";
-
+/* globals.css */
+@layer utilities {
+  .radial-progress-bar {
+    @apply rounded-full;
+    background: radial-gradient(closest-side, white 79%, transparent 80% 100%),
+                conic-gradient(currentColor calc(var(--value) * 1%), #e2e8f0 0); /* background color cho phần chưa hoàn thành */
+    color: #3b82f6; /* Màu của tiến trình (ví dụ: blue-500) */
+  }
+}
 :root {
   --background: #ffffff;
   --foreground: #171717;
