@@ -17,6 +17,7 @@ import {
 import { useRedirectIfAuth } from "@/hooks/useRedirectIfAuth";
 import { useAuthStore } from "../store/useAuthStore";
 import { toast } from "react-toastify";
+import api from "../services/api";
 
 interface AuthErrorResponse {
   message: string;
@@ -57,8 +58,8 @@ const AuthForm = () => {
     const endpoint = isLogin ? "/login" : "/register";
 
     try {
-      const response = await axios.post(
-        `http://localhost:5000/api/auth${endpoint}`,
+      const response = await api.post(
+        `/auth${endpoint}`,
         isLogin
           ? { email: formData.email, password: formData.password }
           : formData,
