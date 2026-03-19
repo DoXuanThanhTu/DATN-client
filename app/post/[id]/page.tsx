@@ -277,13 +277,13 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        <div className="bg-amber-50 rounded-2xl p-4 flex gap-3 border border-amber-100">
+        {/* <div className="bg-amber-50 rounded-2xl p-4 flex gap-3 border border-amber-100">
           <Info className="text-amber-500 shrink-0" size={20} />
           <p className="text-[12px] text-amber-800 leading-snug">
             <b>Mẹo an toàn:</b> Luôn kiểm tra sản phẩm tại nơi công cộng, không
             chuyển khoản trước khi nhận hàng.
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

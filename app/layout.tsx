@@ -7,7 +7,7 @@ import ActivityTracker from "@/components/ActivityTracker";
 import NavbarWrapper from "@/components/NavbarWrapper";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import "./globals.css";
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
   subsets: ["latin", "vietnamese"],

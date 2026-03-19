@@ -1,8 +1,9 @@
+import api from "@/app/services/api";
 import axios from "axios";
 import imageCompression from "browser-image-compression";
 
 export const getUploadAuth = async () => {
-  const { data } = await axios.get("http://localhost:5000/api/auth");
+  const { data } = await api.get("auth");
   return data;
 };
 
