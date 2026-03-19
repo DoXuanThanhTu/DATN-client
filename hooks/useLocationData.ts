@@ -1,6 +1,6 @@
 "use client";
+import api from "@/app/services/api";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 
 export const useLocationData = () => {
   return useQuery({
@@ -13,9 +13,7 @@ export const useLocationData = () => {
 
       if (cached) return JSON.parse(cached);
 
-      const { data } = await axios.get(
-        "http://localhost:5000/api/locations/by-province",
-      );
+      const { data } = await api.get("/locations/by-province");
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
       return data;
     },
