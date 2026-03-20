@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "leaflet/dist/leaflet.css";
-import LocationPreloader from "@/components/LocationPreloader";
 import Providers from "@/providers/query";
 import ActivityTracker from "@/components/ActivityTracker";
 import NavbarWrapper from "@/components/NavbarWrapper";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./globals.css";
+import Preloader from "@/components/Preloader";
+import MaterialUIProviders from "@/components/Providers";
+import Footer from "@/components/Footer";
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
   subsets: ["latin", "vietnamese"],
@@ -28,26 +30,27 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${roboto.variable} h-full antialiased`}>
       <body className={`${roboto.className} min-h-full flex flex-col`}>
-        <Providers>
-          <ActivityTracker />
-          <LocationPreloader />
-          <NavbarWrapper />
+        <MaterialUIProviders>
+          <Providers>
+            <ActivityTracker />
+            <Preloader />
+            <NavbarWrapper />
 
-          <main className="flex-1">{children}</main>
-
-          <ToastContainer
-            position="top-right"
-            autoClose={2000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="colored"
-          />
-        </Providers>
+            <main className="flex-1">{children}</main>
+            <ToastContainer
+              position="top-right"
+              autoClose={2000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="colored"
+            />
+          </Providers>
+        </MaterialUIProviders>
       </body>
     </html>
   );

@@ -1,31 +1,70 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Bell, X } from "lucide-react";
+import { Search, Bell, X, Loader2 } from "lucide-react";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import UserMenu from "./UserMenu";
 import { useAuthStore } from "@/app/store/useAuthStore";
+import api from "@/app/services/api"; // Giả định bạn có axios instance
 
 export default function Navbar() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
   const user = useHydratedStore(useAuthStore, (state) => state.user);
   const isHydrating = user === undefined;
 
+  // 1. Xử lý Debounce Search
   useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = "hidden";
-      document.body.style.paddingRight = "var(--removed-body-scroll-bar-size)";
-    } else {
-      document.body.style.overflow = "unset";
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      return;
     }
 
-    return () => {
-      document.body.style.overflow = "unset";
+    const delayDebounceFn = setTimeout(async () => {
+      setIsLoading(true);
+      setShowResults(true);
+      try {
+        const res = await api.get(`/posts?keyword=${searchTerm}&limit=5`);
+        setSearchResults(res.data.data || []);
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 500); // Chờ 500ms sau khi ngừng gõ mới gọi API
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  // 2. Đóng kết quả khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        setShowResults(false);
+      }
     };
-  }, [isModalOpen]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      router.push(`/search?keyword=${searchTerm}`);
+      setShowResults(false);
+    }
+  };
 
   const handlePostClick = () => {
     if (!user) {
@@ -37,8 +76,9 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-100 bg-white border-b border-gray-100 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+          {/* Logo */}
           <div className="flex items-center gap-4 shrink-0">
             <Link
               href="/"
@@ -48,17 +88,75 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <div className="flex-1 max-w-2xl relative">
-            <input
-              type="text"
-              placeholder="Tìm sản phẩm..."
-              className="w-full bg-gray-100 border-none rounded-lg py-2.5 pl-4 pr-12 outline-none text-sm font-medium focus:ring-2 focus:ring-orange-200 transition-all"
-            />
-            <button className="absolute right-1 top-1/2 -translate-y-1/2 p-2 bg-yellow-400 rounded-md hover:bg-yellow-500 transition-colors">
-              <Search size={18} />
-            </button>
+          {/* Search Bar with Debounce & Results */}
+          <div className="flex-1 max-w-2xl relative" ref={searchRef}>
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => searchTerm && setShowResults(true)}
+                placeholder="Tìm sản phẩm..."
+                className="w-full bg-gray-100 border-none rounded-lg py-2.5 pl-4 pr-12 outline-none text-sm font-medium focus:ring-2 focus:ring-orange-200 transition-all"
+              />
+              <button
+                type="submit"
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-2 bg-yellow-400 rounded-md hover:bg-yellow-500 transition-colors"
+              >
+                {isLoading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Search size={18} />
+                )}
+              </button>
+            </form>
+
+            {/* Floating Search Results */}
+            {showResults && searchTerm.length > 0 && (
+              <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                {searchResults.length > 0 ? (
+                  <div className="py-2">
+                    {searchResults.map((post: any) => (
+                      <Link
+                        key={post._id}
+                        href={`/post/${post.slug}`}
+                        onClick={() => setShowResults(false)}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <img
+                          src={post.images[0] || "/no-image.png"}
+                          alt={post.title}
+                          className="w-12 h-12 rounded-md object-cover flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {post.title}
+                          </p>
+                          <p className="text-xs text-orange-600 font-bold">
+                            {post.price.toLocaleString("vi-VN")} đ
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                    <button
+                      onClick={handleSearchSubmit}
+                      className="w-full py-2.5 text-center text-sm text-blue-600 font-medium bg-gray-50 hover:bg-gray-100"
+                    >
+                      Xem tất cả kết quả cho "{searchTerm}"
+                    </button>
+                  </div>
+                ) : (
+                  !isLoading && (
+                    <div className="p-8 text-center text-gray-500 text-sm">
+                      Không tìm thấy sản phẩm nào khớp với "{searchTerm}"
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Actions */}
           <div className="flex items-center gap-2 md:gap-4 shrink-0 min-w-30 justify-end">
             {!isHydrating && !user && (
               <Link
@@ -79,7 +177,6 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
-
       {isModalOpen && (
         <div className="fixed inset-0 z-110 flex items-center justify-center p-4">
           <div
@@ -127,7 +224,7 @@ export default function Navbar() {
             </div>
           </div>
         </div>
-      )}
+      )}{" "}
     </>
   );
 }

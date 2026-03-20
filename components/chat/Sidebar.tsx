@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useChatStore } from "@/app/store/useChatStore";
 import { UserPlus, Search } from "lucide-react";
 import { User } from "@/app/types/chat";
+import Link from "next/link";
 
 interface Participant {
   userId: string | User;
@@ -33,8 +34,10 @@ export const Sidebar = () => {
     <div className="w-80 h-full border-r bg-white flex flex-col">
       {/* Header */}
       <div className="p-4 border-b bg-white sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-800 mb-3">Moji Chat</h1>
-        <div className="relative">
+        <Link href="/" className="text-xl font-bold text-gray-800 ">
+          <span>&lt;</span> Home
+        </Link>
+        {/* <div className="relative">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             size={18}
@@ -44,7 +47,7 @@ export const Sidebar = () => {
             placeholder="Tìm kiếm người dùng..."
             className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Danh sách Danh bạ */}

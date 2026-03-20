@@ -1,18 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Search,
-  Smartphone,
-  Laptop,
-  Watch,
-  Camera,
-  MapPin,
-  Flame,
-  Loader2,
-} from "lucide-react";
+import { Search, MapPin, Flame, Loader2, Clock } from "lucide-react";
 import Link from "next/link";
 import api from "@/app/services/api";
+import { useCategoryData } from "@/hooks/useCategoryData";
+import CategoryHierarchy from "@/components/CategoryHierarchy";
+import Footer from "@/components/Footer";
+import formatDate from "@/utils/formatDate";
 
 interface Product {
   _id: string;
@@ -22,51 +17,24 @@ interface Product {
   createdAt: string;
   location: {
     provinceName: string;
-    wardName: string;
-    fullAddress: string;
   };
 }
-
-const CATEGORIES = [
-  {
-    id: 1,
-    name: "Điện thoại",
-    icon: <Smartphone size={24} />,
-    color: "bg-blue-50 text-blue-600",
-  },
-  {
-    id: 2,
-    name: "Laptop",
-    icon: <Laptop size={24} />,
-    color: "bg-purple-50 text-purple-600",
-  },
-  {
-    id: 3,
-    name: "Đồng hồ",
-    icon: <Watch size={24} />,
-    color: "bg-orange-50 text-orange-600",
-  },
-  {
-    id: 4,
-    name: "Máy ảnh",
-    icon: <Camera size={24} />,
-    color: "bg-green-50 text-green-600",
-  },
-];
 
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { data: categories = [], isLoading: isLoadingCats } = useCategoryData();
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        const response = await api.get("/posts");
-        setProducts(response.data.data);
+        const res = await api.get("/posts");
+        setProducts(res.data.data || []);
       } catch (error) {
-        console.error("Lỗi khi lấy danh sách tin:", error);
+        console.error(error);
       } finally {
         setIsLoading(false);
       }
@@ -74,45 +42,14 @@ export default function HomePage() {
     fetchProducts();
   }, []);
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-
-    const diffInSeconds = Math.floor(diffInMs / 1000);
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    const diffInDays = Math.floor(diffInHours / 24);
-
-    if (diffInSeconds < 60) {
-      return diffInSeconds <= 0 ? "Vừa xong" : `${diffInSeconds} giây trước`;
-    }
-
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} phút trước`;
-    }
-
-    if (diffInHours < 24) {
-      return `${diffInHours} giờ trước`;
-    }
-
-    if (diffInDays < 30) {
-      return `${diffInDays} ngày trước`;
-    }
-
-    return date.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="bg-orange-500 p-6 pb-12 rounded-b-[40px] shadow-lg text-white">
+    <div>
+      <div className="min-h-screen bg-gray-50 pb-20">
+        {/* HEADER */}
+        {/* <div className="bg-orange-500 p-6 pb-12 rounded-b-[40px] text-white">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-black tracking-tighter italic uppercase">
+            <h1 className="text-2xl font-black italic uppercase">
               RE-COMMERCE
             </h1>
             <div className="flex items-center gap-2">
@@ -122,100 +59,102 @@ export default function HomePage() {
           </div>
           <div className="relative">
             <input
-              type="text"
-              placeholder="Bạn đang tìm món đồ gì?"
-              className="w-full p-4 pl-12 rounded-2xl border-none shadow-xl outline-none text-gray-800"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Bạn đang tìm gì?"
+              className="w-full p-4 pl-12 rounded-2xl text-gray-800 outline-none"
             />
-            <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              size={22}
-            />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           </div>
         </div>
-      </div>
+      </div> */}
 
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
-        <div className="bg-white rounded-4xl p-6 shadow-sm grid grid-cols-4 gap-4">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              className="flex flex-col items-center gap-2 group"
-            >
-              <div
-                className={`p-4 rounded-2xl ${cat.color} group-hover:scale-110 transition-transform shadow-sm`}
-              >
-                {cat.icon}
-              </div>
-              <span className="text-[11px] font-extrabold text-gray-600 uppercase tracking-tighter">
-                {cat.name}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-gray-800 flex items-center gap-2">
-              <Flame className="text-orange-500" fill="currentColor" /> Tin đăng
-              mới nhất
-            </h2>
-            <Link
-              href="/all"
-              className="text-sm font-bold text-orange-600 hover:underline"
-            >
-              Xem tất cả
-            </Link>
-          </div>
-
-          {isLoading ? (
-            <div className="flex flex-col items-center py-20 text-gray-400">
-              <Loader2 className="animate-spin mb-2" size={32} />
-              <p className="font-medium">Đang tải tin đăng...</p>
-            </div>
-          ) : products.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {products.map((product) => (
-                <Link
-                  key={product._id}
-                  href={`/post/${product._id}`}
-                  className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group border border-gray-100"
-                >
-                  <div className="aspect-square relative overflow-hidden bg-gray-100">
-                    <img
-                      src={
-                        product.images[0] ||
-                        "https://placehold.co/400?text=No+Image"
-                      }
-                      alt={product.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-                  <div className="p-3 space-y-2">
-                    <h3 className="text-sm font-bold text-gray-800 line-clamp-2 min-h-10">
-                      {product.title}
-                    </h3>
-                    <p className="text-base font-black text-orange-600">
-                      {product.price.toLocaleString()} đ
-                    </p>
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 font-bold uppercase">
-                      <span>{formatTime(product.createdAt)}</span>
-                      <span className="truncate max-w-20">
-                        {product.location.provinceName}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+        {/* CATEGORY */}
+        <div className="max-w-4xl mx-auto px-4 -mt-8 pt-20">
+          {/* <div className="bg-white rounded-3xl p-6 grid grid-cols-4 gap-4 shadow-sm">
+          {isLoadingCats ? (
+            <div className="col-span-4 flex justify-center py-6">
+              <Loader2 className="animate-spin text-orange-500" />
             </div>
           ) : (
-            <div className="text-center py-20 bg-white rounded-4xl text-gray-400 font-bold">
-              Chưa có tin đăng nào.
-            </div>
+            categories.map((cat: any) => (
+              <Link
+                key={cat._id}
+                href={`/search?cat=${cat.slug}`}
+                className="flex flex-col items-center gap-2 group"
+              >
+                <div className="p-4 rounded-2xl bg-orange-50 text-orange-600 group-hover:bg-orange-100 transition-colors">
+                  📦
+                </div>
+                <span className="text-[10px] md:text-xs font-bold text-center line-clamp-1">
+                  {cat.name}
+                </span>
+              </Link>
+            ))
           )}
+        </div> */}
+          <CategoryHierarchy
+            categories={categories}
+            isLoadingCats={isLoadingCats}
+          />
+          {/* PRODUCTS */}
+          <div className="mt-8">
+            <h2 className="font-bold flex items-center gap-2 mb-4 text-gray-800">
+              <Flame className="text-orange-500 fill-orange-500" /> Tin mới
+            </h2>
+
+            {isLoading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="animate-spin text-orange-500" size={32} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {products.map((p) => (
+                  <Link key={p._id} href={`/post/${p._id}`} className="group">
+                    <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full border border-gray-100">
+                      <div className="relative aspect-square overflow-hidden bg-gray-100">
+                        <img
+                          src={p.images[0] || "/no-image.png"}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          alt={p.title}
+                        />
+                      </div>
+
+                      <div className="p-3 flex flex-col flex-1 justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800 line-clamp-2 mb-2 leading-snug min-h-[2.5rem]">
+                            {p.title}
+                          </p>
+                          <p className="text-orange-600 font-bold text-base">
+                            {p.price.toLocaleString()} đ
+                          </p>
+                        </div>
+
+                        {/* Thông tin phụ (Địa điểm) */}
+                        <div className="mt-3 pt-2 border-t border-gray-50 flex items-center text-[10px] text-gray-400 flex justify-between">
+                          <div className="flex items-center">
+                            <MapPin size={10} className="mr-1" />
+                            <span className="truncate">
+                              {p.location?.provinceName || "Toàn quốc"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <Clock size={10} className="ml-1" />
+                            <span className="ml-1">
+                              {formatDate(p.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

@@ -65,7 +65,7 @@ export const ChatContainer = () => {
   ]);
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollRef.current?.scrollIntoView({ behavior: "instant" });
   }, [messages, typingUser]);
 
   useEffect(() => {

@@ -9,8 +9,10 @@ import {
   LogOut,
   HelpCircle,
   Star,
+  FileText,
 } from "lucide-react";
 import { useAuthStore } from "@/app/store/useAuthStore";
+import Link from "next/link";
 
 export default function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -76,17 +78,20 @@ export default function UserMenu() {
 
           <div className="max-h-100 overflow-y-auto p-2 space-y-1">
             <MenuSection title="Tiện ích">
-              <MenuItem icon={<Heart size={18} />} label="Tin đăng đã lưu" />
+              {/* <MenuItem icon={<Heart size={18} />} label="Tin đăng đã lưu" />
               <MenuItem icon={<History size={18} />} label="Lịch sử xem tin" />
-              <MenuItem icon={<Star size={18} />} label="Đánh giá từ tôi" />
+              <MenuItem icon={<Star size={18} />} label="Đánh giá từ tôi" /> */}
+              <Link href="/my-posts">
+                <MenuItem icon={<FileText size={18} />} label="Tin của tôi" />
+              </Link>
             </MenuSection>
 
             <MenuSection title="Khác">
-              <MenuItem
+              {/* <MenuItem
                 icon={<Settings size={18} />}
                 label="Cài đặt tài khoản"
               />
-              <MenuItem icon={<HelpCircle size={18} />} label="Trợ giúp" />
+              <MenuItem icon={<HelpCircle size={18} />} label="Trợ giúp" /> */}
               <div
                 onClick={() => {
                   logout();
