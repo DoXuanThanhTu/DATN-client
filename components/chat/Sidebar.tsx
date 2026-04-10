@@ -72,12 +72,12 @@ export const Sidebar = () => {
       <div className="px-5 py-5 flex flex-col gap-4 border-b border-gray-50 sticky top-0 z-10 bg-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
+            {/* <button
               onClick={() => router.back()}
               className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
             >
               <ArrowLeft size={18} className="text-gray-500" />
-            </button>
+            </button> */}
             <div>
               <h1 className="text-lg font-bold text-gray-900 tracking-tight">
                 Tin nhắn
