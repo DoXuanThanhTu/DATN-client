@@ -370,13 +370,18 @@ export default function ProductPostForm() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold mb-2">
-                Giá bán (đ) *
+                Giá bán (đ) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 {...register("price")}
                 className={`w-full p-3 border rounded-xl outline-none ${errors.price ? "border-red-500" : "border-gray-200"}`}
               />
+              {errors.price && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.price.message}
+                </p>
+              )}
             </div>
             <div className="flex items-end pb-3">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -397,7 +402,7 @@ export default function ProductPostForm() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold mb-1">
-                  Tình trạng *
+                  Tình trạng <span className="text-red-500">*</span>
                 </label>
                 <select
                   {...register("condition.label")}

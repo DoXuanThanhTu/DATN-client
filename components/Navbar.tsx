@@ -3,11 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Bell, X, Loader2 } from "lucide-react";
+import { Search, Bell, X, Loader2, MessageCircle } from "lucide-react";
 import { useHydratedStore } from "@/hooks/useHydratedStore";
 import UserMenu from "./UserMenu";
 import { useAuthStore } from "@/app/store/useAuthStore";
 import api from "@/app/services/api"; // Giả định bạn có axios instance
+import { ChatBubble } from "@mui/icons-material";
+import NotificationMenu from "./NotificationMenu";
+import { useChatStore } from "@/app/store/useChatStore";
 
 export default function Navbar() {
   const router = useRouter();
@@ -19,8 +22,19 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const user = useHydratedStore(useAuthStore, (state) => state.user);
+  const { disconnectSocket, getNotifications } = useChatStore();
   const isHydrating = user === undefined;
+  useEffect(() => {
+    if (user?.id) {
+      // 1. Cứ đăng nhập xong là kết nối Socket ngay, không đợi vào trang chat
 
+      // 2. Lấy danh sách thông báo cũ từ DB lần đầu
+      getNotifications();
+    } else {
+      // Đăng xuất thì ngắt kết nối
+      disconnectSocket();
+    }
+  }, [user, disconnectSocket, getNotifications]);
   // 1. Xử lý Debounce Search
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -166,6 +180,12 @@ export default function Navbar() {
                 Đăng nhập
               </Link>
             )}
+            {user && (
+              <Link href="/chat">
+                <MessageCircle className="w-6 h-6" />
+              </Link>
+            )}
+            {user && <NotificationMenu />}
             {user && <UserMenu />}
 
             <button

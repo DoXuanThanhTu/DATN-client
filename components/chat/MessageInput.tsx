@@ -1,72 +1,82 @@
-import { useState, useRef, useEffect } from "react";
-import { Send, Image as ImageIcon, Smile } from "lucide-react";
+"use client";
+
+import { useState, useRef } from "react";
+import { Send, Smile, PlusCircle, Image as ImageIcon } from "lucide-react";
 import { useChatStore } from "@/app/store/useChatStore";
+import { useAuthStore } from "@/app/store/useAuthStore"; // Import thêm authStore
 
 export const MessageInput = () => {
   const [text, setText] = useState("");
-  const { sendMessage, socket, selectedConversation } = useChatStore();
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { sendMessage, selectedConversation, markConversationAsRead } =
+    useChatStore();
+  const { user } = useAuthStore();
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Lấy ID người dùng hiện tại
+  const userId = user?.id;
+
+  const handleSend = async () => {
     if (!text.trim()) return;
-
-    await sendMessage(text);
+    const msg = text.trim();
     setText("");
-
-    socket?.emit("stop_typing", {
-      conversationId: selectedConversation?._id,
-      userId: "MY_ID",
-    });
+    if (inputRef.current) inputRef.current.style.height = "auto";
+    await sendMessage(msg);
   };
 
-  const handleTyping = () => {
-    if (!socket || !selectedConversation) return;
+  // Logic xử lý khi người dùng click/focus vào ô nhập liệu
+  const handleFocus = () => {
+    if (selectedConversation?._id && userId) {
+      // Chỉ gọi API nếu thực sự có tin nhắn chưa đọc của chính mình
+      // Lưu ý: unreadCount ở đây là object { [userId]: count }
+      const myUnreadCount = selectedConversation.unreadCount?.[userId] || 0;
 
-    socket.emit("typing", {
-      conversationId: selectedConversation._id,
-      userId: "MY_ID",
-    });
-
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("stop_typing", {
-        conversationId: selectedConversation._id,
-        userId: "MY_ID",
-      });
-    }, 2000);
+      if (myUnreadCount > 0) {
+        markConversationAsRead(selectedConversation._id, userId);
+      }
+    }
   };
 
   return (
-    <div className="p-4 bg-white border-t">
-      <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-        <button
-          type="button"
-          className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
-        >
-          <ImageIcon size={20} />
-        </button>
+    <div className="p-3 bg-white flex items-center gap-2 border-t border-gray-100">
+      <div className="flex gap-2 text-blue-600 px-1">
+        {/* <PlusCircle size={22} className="cursor-pointer hover:opacity-70" /> */}
+        {/* <ImageIcon size={22} className="cursor-pointer hover:opacity-70" /> */}
+      </div>
 
-        <input
-          type="text"
+      <div className="flex-1 bg-[#f0f2f5] rounded-2xl flex items-end px-3 py-1.5">
+        <textarea
+          ref={inputRef}
+          rows={1}
           value={text}
+          onFocus={handleFocus} // <--- Thêm sự kiện này ở đây
           onChange={(e) => {
             setText(e.target.value);
-            handleTyping();
+            e.target.style.height = "auto";
+            e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
           }}
+          onKeyDown={(e) =>
+            e.key === "Enter" &&
+            !e.shiftKey &&
+            (e.preventDefault(), handleSend())
+          }
           placeholder="Nhập tin nhắn..."
-          className="flex-1 bg-gray-100 border-none rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 bg-transparent border-none resize-none focus:outline-none text-[15px] py-1"
         />
+        {/* <Smile
+          size={22}
+          className="text-blue-600 mb-1 cursor-pointer hover:opacity-70"
+        /> */}
+      </div>
 
-        <button
-          type="submit"
-          disabled={!text.trim()}
-          className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Send size={20} />
-        </button>
-      </form>
+      <button
+        onClick={handleSend}
+        disabled={!text.trim()}
+        className={`p-2 transition-all ${
+          text.trim() ? "text-blue-600" : "text-gray-300"
+        }`}
+      >
+        <Send size={22} fill={text.trim() ? "currentColor" : "none"} />
+      </button>
     </div>
   );
 };

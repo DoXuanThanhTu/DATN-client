@@ -10,6 +10,7 @@ import "./globals.css";
 import Preloader from "@/components/Preloader";
 import MaterialUIProviders from "@/components/Providers";
 import Footer from "@/components/Footer";
+import { SocketManager } from "@/providers/SocketManager";
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
   subsets: ["latin", "vietnamese"],
@@ -18,7 +19,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Chợ Tốt Clone - Nền tảng rao vặt",
+  title: "Giao dịch đồ cũ",
   description: "Mua bán nhanh chóng, tiện lợi",
 };
 
@@ -30,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${roboto.variable} h-full antialiased`}>
       <body className={`${roboto.className} min-h-full flex flex-col`}>
+        <SocketManager />
         <MaterialUIProviders>
           <Providers>
             <ActivityTracker />

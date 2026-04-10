@@ -10,6 +10,8 @@ import {
   HelpCircle,
   Star,
   FileText,
+  ShoppingBag,
+  User,
 } from "lucide-react";
 import { useAuthStore } from "@/app/store/useAuthStore";
 import Link from "next/link";
@@ -56,7 +58,7 @@ export default function UserMenu() {
       </button>
 
       {isMenuOpen && (
-        <div className="absolute right-0 mt-3 w-70 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-100">
+        <div className="absolute right-0 mt-3 w-70 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           <div className="p-4 flex flex-col items-center border-b border-gray-50 bg-gray-50/50">
             <div className="w-16 h-16 rounded-full overflow-hidden mb-2 border-2 border-orange-100 p-0.5 bg-white">
               <img
@@ -84,14 +86,19 @@ export default function UserMenu() {
               <Link href="/my-posts">
                 <MenuItem icon={<FileText size={18} />} label="Tin của tôi" />
               </Link>
+              <Link href="/my-orders">
+                <MenuItem
+                  icon={<ShoppingBag size={18} />}
+                  label="Đơn hàng của tôi"
+                />
+              </Link>
             </MenuSection>
 
             <MenuSection title="Khác">
-              {/* <MenuItem
-                icon={<Settings size={18} />}
-                label="Cài đặt tài khoản"
-              />
-              <MenuItem icon={<HelpCircle size={18} />} label="Trợ giúp" /> */}
+              <Link href="/profile">
+                <MenuItem icon={<User size={18} />} label="Hồ sơ cá nhân" />
+              </Link>
+              {/* <MenuItem icon={<HelpCircle size={18} />} label="Trợ giúp" /> */}
               <div
                 onClick={() => {
                   logout();

@@ -127,7 +127,8 @@ const SearchContent = () => {
       const response = await api.get(`/posts`, {
         params: {
           keyword,
-          categoryId: finalCategoryId,
+          parentCategoryId: appliedFilters.parentCategoryId,
+          categoryId: appliedFilters.categoryId,
           min: appliedFilters.min,
           max: appliedFilters.max,
           provinceCode: appliedFilters.provinceCode,

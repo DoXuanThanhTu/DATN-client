@@ -11,8 +11,28 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+ --chat-primary: #0084ff;
+  --chat-primary-light: #e7f3ff;
+  --chat-primary-dark: #0073e6;
+  
+  --chat-bg-main: #ffffff;
+  --chat-bg-sidebar: #ffffff;
+  --chat-bg-input: #f0f2f5;
+  
+  --chat-border: #f0f2f5;
+  
+  --chat-msg-me: #0084ff;
+  --chat-msg-other: #e4e6eb;
+  --chat-text-me: #ffffff;
+  --chat-text-other: #050505;
 }
-
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #bcc0c4;
+  border-radius: 10px;
+}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -9,6 +9,14 @@ interface User {
   email: string;
   role: string;
   avatar?: string;
+  phone?: string;
+  address?: {
+    provinceName: string;
+    provinceCode: string;
+    wardName: string;
+    wardCode: string;
+    detail: string;
+  };
 }
 
 interface AuthState {
@@ -17,6 +25,7 @@ interface AuthState {
   login: (user: User, token: string) => void;
   logout: () => void;
   setToken: (token: string | null) => void;
+  updateUser: (data: Partial<User>) => void; // Thêm dòng này
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -36,6 +45,10 @@ export const useAuthStore = create<AuthState>()(
       setToken: (token) => {
         set({ token });
       },
+      updateUser: (data) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...data } : null,
+        })),
     }),
     {
       name: "auth-storage",

@@ -55,13 +55,15 @@ export default function MyPostsPage() {
   const [activeTab, setActiveTab] = useState(0);
 
   const tabs = [
+    { id: "all", label: "TẤT CẢ", key: "all" },
+
     { id: "active", label: "ĐANG HIỂN THỊ", key: "active" },
     { id: "hidden", label: "BỊ ẨN", key: "hidden" },
     { id: "rejected", label: "BỊ TỪ CHỐI", key: "rejected" },
     // { id: "pending_payment", label: "CẦN THANH TOÁN", key: "pending_payment" },
     // { id: "draft", label: "TIN NHÁP", key: "draft" },
     { id: "pending", label: "CHỜ DUYỆT", key: "pending" },
-    { id: "all", label: "TẤT CẢ", key: "all" },
+    { id: "sold", label: "ĐÃ BÁN", key: "sold" },
   ];
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -193,22 +195,24 @@ export default function MyPostsPage() {
                 <Typography variant="h6" sx={{ fontWeight: "bold" }}>
                   Không tìm thấy tin đăng
                 </Typography>
-                <Button
-                  component={Link}
-                  href="/post"
-                  variant="contained"
-                  sx={{
-                    mt: 4,
-                    bgcolor: "#ff8800",
-                    "&:hover": { bgcolor: "#e67a00" },
-                    px: 5,
-                    py: 1.2,
-                    fontWeight: "bold",
-                    borderRadius: 2,
-                  }}
-                >
-                  Đăng tin ngay
-                </Button>
+                {activeTab === 0 && (
+                  <Button
+                    component={Link}
+                    href="/post"
+                    variant="contained"
+                    sx={{
+                      mt: 4,
+                      bgcolor: "#ff8800",
+                      "&:hover": { bgcolor: "#e67a00" },
+                      px: 5,
+                      py: 1.2,
+                      fontWeight: "bold",
+                      borderRadius: 2,
+                    }}
+                  >
+                    Đăng tin ngay
+                  </Button>
+                )}
               </Box>
             ) : (
               <Box>
@@ -293,18 +297,24 @@ export default function MyPostsPage() {
                           justifyContent: "center",
                         }}
                       >
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          sx={{
-                            textTransform: "none",
-                            color: "#1976d2",
-                            borderColor: "#1976d2",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          <Link href={`/post/edit/${post._id}`}>Chỉnh sửa</Link>
-                        </Button>
+                        {post.status !== "sold" ? (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                              textTransform: "none",
+                              color: "#1976d2",
+                              borderColor: "#1976d2",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            <Link href={`/post/edit/${post._id}`}>
+                              Chỉnh sửa
+                            </Link>
+                          </Button>
+                        ) : (
+                          <p>Đã bán</p>
+                        )}
                       </Box>
                     </Box>
                     <Divider sx={{ mx: 2 }} />

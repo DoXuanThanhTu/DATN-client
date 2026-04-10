@@ -1,33 +1,41 @@
 "use client";
+
+import { useEffect, useRef, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useChatStore } from "@/app/store/useChatStore";
-import { useEffect, useRef, useState, useMemo } from "react";
-import { MessageInput } from "./MessageInput";
 import { useAuthStore } from "@/app/store/useAuthStore";
+import { MessageInput } from "./MessageInput";
+import { User, Message, Participant } from "@/app/types/chat";
+import { ShoppingCart, Inbox } from "lucide-react";
+import api from "@/app/services/api";
 
-interface UserDetail {
-  _id: string;
-  username: string;
-  displayName?: string;
-  avatar?: string;
+// --- INTERFACES ---
+interface OfferDetails {
+  productId: string;
+  productName: string;
+  productImage: string;
+  originalPrice: number;
+  offeredPrice: number;
+  status: "pending" | "accepted" | "rejected";
 }
 
-interface Participant {
-  userId: string | UserDetail;
+interface ProductDetails {
+  productId: string;
+  name: string;
+  image: string;
+  originalPrice: number;
 }
 
-interface Message {
-  _id: string;
-  senderId: string;
-  content: string;
-  createdAt: string;
-}
-
-interface Conversation {
-  _id: string;
-  participants: Participant[];
-}
+const formatMsgTime = (date: string | Date | undefined) =>
+  date
+    ? new Date(date).toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
 export const ChatContainer = () => {
+  const router = useRouter();
   const {
     selectedConversation,
     messages,
@@ -35,24 +43,45 @@ export const ChatContainer = () => {
     subscribeToMessages,
     unsubscribeFromMessages,
     socket,
+    sendMessage,
+    onlineUsers,
   } = useChatStore();
 
+  const { user: currentUser } = useAuthStore();
+  const currentUserId = currentUser?.id;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [typingUser, setTypingUser] = useState<string | null>(null);
-  const currentUserId = useAuthStore((state) => state.user?.id);
 
+  // --- LOGIC ĐIỀU HƯỚNG SANG PAGE THANH TOÁN ---
+  const goToCheckout = (
+    info: OfferDetails | ProductDetails,
+    isFromOffer: boolean = false,
+  ) => {
+    // Ép kiểu hoặc dùng check property để lấy giá trị đúng
+    const productId = "productId" in info ? info.productId : "";
+    const finalPriceToPay = isFromOffer
+      ? (info as OfferDetails).offeredPrice
+      : (info as ProductDetails).originalPrice;
+
+    const query = new URLSearchParams({
+      id: productId,
+      type: isFromOffer ? "negotiated" : "fixed",
+      price: finalPriceToPay.toString(),
+    }).toString();
+
+    router.push(`/checkout?${query}`);
+  };
+
+  // --- QUẢN LÝ SOCKET & MESSAGES ---
   useEffect(() => {
-    const conversationId = selectedConversation?._id;
-
-    if (conversationId && conversationId !== "new" && socket) {
-      getMessages(conversationId);
-      socket.emit("join_conversation", conversationId);
+    const cid = selectedConversation?._id;
+    if (cid && cid !== "new" && socket) {
+      getMessages(cid);
+      socket.emit("join_conversation", cid);
       subscribeToMessages();
     }
-
     return () => {
-      if (conversationId && conversationId !== "new" && socket) {
-        socket.emit("leave_conversation", conversationId);
+      if (cid && cid !== "new" && socket) {
+        socket.emit("leave_conversation", cid);
       }
       unsubscribeFromMessages();
     };
@@ -64,113 +93,211 @@ export const ChatContainer = () => {
     unsubscribeFromMessages,
   ]);
 
+  // Tự động cuộn xuống tin nhắn mới
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "instant" });
-  }, [messages, typingUser]);
+    if (messages.length > 0) {
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
-  useEffect(() => {
-    if (!socket) return;
-    const handleTyping = ({ userId }: { userId: string }) =>
-      setTypingUser(userId);
-    const handleStopTyping = () => setTypingUser(null);
-
-    socket.on("user_typing", handleTyping);
-    socket.on("user_stop_typing", handleStopTyping);
-
-    return () => {
-      socket.off("user_typing", handleTyping);
-      socket.off("user_stop_typing", handleStopTyping);
-    };
-  }, [socket]);
-
-  const displayName = useMemo(() => {
-    if (!selectedConversation || !currentUserId) return "Đang tải...";
-
-    const otherParticipant = selectedConversation.participants?.find((p) => {
-      const pId =
-        typeof p.userId === "object" ? p.userId._id || p.userId.id : p.userId;
-
+  const { otherUser, isOnline, statusText } = useMemo(() => {
+    const other = selectedConversation?.participants?.find((p: Participant) => {
+      const pId = typeof p.userId === "object" ? p.userId._id : p.userId;
       return String(pId) !== String(currentUserId);
     });
+    const u = other?.userId as User | undefined;
+    const online = u?._id ? onlineUsers.includes(u._id) : false;
+    return {
+      otherUser: u,
+      isOnline: online,
+      statusText: online ? "Đang hoạt động" : "Ngoại tuyến",
+    };
+  }, [selectedConversation, currentUserId, onlineUsers]);
 
-    if (!otherParticipant) return "Cuộc trò chuyện";
+  const handleOfferAction = async (
+    msg: Message,
+    action: "accepted" | "rejected",
+  ) => {
+    try {
+      await api.put(`/chat/messages/${msg._id}/status`, { status: action });
+      const label = action === "accepted" ? "CHẤP NHẬN" : "TỪ CHỐI";
+      const offer = msg.offerDetails as OfferDetails;
 
-    const user = otherParticipant.userId;
+      await sendMessage(
+        `Trạng thái: ${label} trả giá cho "${offer?.productName || "sản phẩm"}"`,
+      );
 
-    if (typeof user === "object" && user !== null) {
-      const nameCandidate = user.name;
-
-      if (nameCandidate) return nameCandidate;
-
-      return `Người dùng ${String(user._id).slice(-4)}`;
+      if (selectedConversation?._id) {
+        getMessages(selectedConversation._id);
+      }
+    } catch (err) {
+      console.error("Lỗi khi cập nhật trạng thái trả giá:", err);
     }
+  };
 
-    return "Người dùng";
-  }, [selectedConversation, currentUserId]);
-
-  if (!selectedConversation) {
+  if (!selectedConversation)
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 opacity-50">
-        <p className="text-lg">Chọn một cuộc trò chuyện để bắt đầu</p>
+      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 text-gray-400">
+        <Inbox size={48} className="mb-2 opacity-20" />
+        <p className="text-sm italic">Chọn một cuộc hội thoại để bắt đầu</p>
       </div>
     );
-  }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white">
-      {/* Header */}
-      <div className="p-4 border-b flex items-center gap-3 sticky top-0 bg-white z-10 shadow-sm">
-        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold shadow-inner">
-          {displayName.charAt(0).toUpperCase()}
+    <div className="flex-1 flex flex-col h-full bg-white relative">
+      {/* HEADER */}
+      <header className="px-5 py-3 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-20">
+        <div className="flex items-center gap-3">
+          <div className="relative shrink-0">
+            <img
+              src={
+                otherUser?.avatar ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser?.name || "U")}&background=e8d5c0`
+              }
+              className="w-11 h-11 rounded-full object-cover border border-gray-100"
+              alt="Avatar"
+            />
+            {isOnline && (
+              <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-white bg-green-500" />
+            )}
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-gray-900">
+              {otherUser?.name || "Người dùng"}
+            </h3>
+            <p className="text-[11px] text-gray-500 flex items-center gap-1">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-green-500" : "bg-gray-300"}`}
+              />
+              {statusText}
+            </p>
+          </div>
         </div>
-        <span className="font-semibold text-gray-800">{displayName}</span>
-      </div>
+      </header>
 
-      {/* Message List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f0f2f5]">
-        {messages.map((m: Message, index: number) => {
-          const isMe = m.senderId === currentUserId;
+      {/* MESSAGES LIST */}
+      <main className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-[#f8f9fa]">
+        {messages.map((m, idx) => {
+          const isMe = String(m.senderId) === String(currentUserId);
+          const offer = m.offerDetails as OfferDetails | undefined;
+          const product = m.productDetails as ProductDetails | undefined;
+
           return (
             <div
-              key={m._id || `temp-${index}`}
-              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+              key={m._id || `msg-${idx}`}
+              className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-2`}
             >
-              <div
-                className={`max-w-[70%] p-3 px-4 rounded-2xl shadow-sm ${
-                  isMe
-                    ? "bg-blue-600 text-white rounded-tr-none"
-                    : "bg-white text-gray-800 border border-gray-200 rounded-tl-none"
-                }`}
-              >
-                <p className="text-sm leading-relaxed">{m.content}</p>
+              <div className="max-w-[85%] md:max-w-[70%]">
+                {m.messageType === "offer" && offer ? (
+                  <div
+                    className={`p-4 rounded-2xl border shadow-sm ${isMe ? "bg-blue-50 border-blue-100" : "bg-white border-gray-200"}`}
+                  >
+                    <div className="flex gap-3 mb-3">
+                      <img
+                        src={offer.productImage}
+                        className="w-14 h-14 rounded-xl object-cover border"
+                        alt="Product"
+                      />
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm truncate text-gray-900">
+                          {offer.productName}
+                        </p>
+                        <p className="text-xs text-gray-400 line-through">
+                          {offer.originalPrice?.toLocaleString()}đ
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-4 p-3 bg-white/50 rounded-xl border border-dashed border-blue-200">
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+                        Giá chốt mong muốn
+                      </span>
+                      <p className="text-xl font-black text-blue-700">
+                        {offer.offeredPrice?.toLocaleString()}đ
+                      </p>
+                    </div>
+
+                    {offer.status === "accepted" ? (
+                      <div className="space-y-2">
+                        <div className="text-center py-2 bg-green-100 text-green-700 rounded-xl text-xs font-bold">
+                          ✓ Đã đồng ý giá này
+                        </div>
+                        {isMe && (
+                          <button
+                            onClick={() => goToCheckout(offer, true)}
+                            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <ShoppingCart size={16} /> Mua ngay
+                          </button>
+                        )}
+                      </div>
+                    ) : !isMe && offer.status === "pending" ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleOfferAction(m, "rejected")}
+                          className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-bold transition-colors"
+                        >
+                          Từ chối
+                        </button>
+                        <button
+                          onClick={() => handleOfferAction(m, "accepted")}
+                          className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors"
+                        >
+                          Chấp nhận
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-2 text-gray-400 text-[11px] italic bg-gray-50 rounded-lg">
+                        {offer.status === "rejected"
+                          ? "Đã từ chối trả giá"
+                          : "Đang chờ phản hồi..."}
+                      </div>
+                    )}
+                  </div>
+                ) : m.messageType === "offer" && product ? (
+                  <div className="p-3 rounded-2xl border bg-white border-gray-100 shadow-sm overflow-hidden">
+                    <img
+                      src={product.image}
+                      className="w-full h-36 object-cover rounded-xl mb-3"
+                      alt="Product"
+                    />
+                    <div className="px-1">
+                      <p className="font-bold text-sm mb-1 text-gray-900 truncate">
+                        {product.name}
+                      </p>
+                      <p className="text-blue-600 font-black mb-3">
+                        {product.originalPrice?.toLocaleString()}đ
+                      </p>
+                      <button
+                        onClick={() => goToCheckout(product, false)}
+                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors"
+                      >
+                        Mua ngay giá gốc
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`px-4 py-2.5 rounded-2xl shadow-sm ${isMe ? "bg-blue-600 text-white" : "bg-white text-gray-800 border border-gray-100"}`}
+                  >
+                    <p className="text-[14px] leading-relaxed">{m.content}</p>
+                  </div>
+                )}
                 <span
-                  className={`text-[10px] block mt-1 text-right ${isMe ? "text-blue-100" : "text-gray-400"}`}
+                  className={`text-[10px] text-gray-400 mt-1.5 block ${isMe ? "text-right" : "text-left"}`}
                 >
-                  {m.createdAt
-                    ? new Date(m.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : ""}
+                  {formatMsgTime(m.createdAt)}
                 </span>
               </div>
             </div>
           );
         })}
-
-        {typingUser && (
-          <div className="flex justify-start">
-            <div className="bg-gray-200 px-4 py-3 rounded-2xl rounded-tl-none flex gap-1">
-              <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
-              <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-              <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-            </div>
-          </div>
-        )}
         <div ref={scrollRef} />
-      </div>
+      </main>
 
-      <MessageInput />
+      <footer className="bg-white border-t border-gray-100 p-2">
+        <MessageInput />
+      </footer>
     </div>
   );
 };

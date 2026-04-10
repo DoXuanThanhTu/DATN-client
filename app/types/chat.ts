@@ -4,6 +4,7 @@ export interface User {
   name: string;
   avatar?: string;
   displayName?: string;
+  lastActive?: Date;
 }
 
 export interface Message {
@@ -14,10 +15,25 @@ export interface Message {
   imageUrl?: string;
   createdAt: string;
   isDeleted?: boolean;
+  messageType?: "text" | "offer";
+  offerDetails?: {
+    productName: string;
+    productImage: string;
+    originalPrice: number;
+    offeredPrice: number;
+    status?: "pending" | "accepted" | "rejected";
+  };
+  productDetails?: {
+    productId: string;
+    productName: string;
+    productImage: string;
+    originalPrice: number;
+  };
 }
 export interface Participant {
   userId: User;
 }
+export type UnreadCount = Record<string, number>;
 export interface Conversation {
   _id: string;
   type: "direct" | "group";
@@ -28,5 +44,5 @@ export interface Conversation {
     createdAt: string;
   };
   groupInfo?: { name: string };
-  unreadCount?: number;
+  unreadCount?: UnreadCount;
 }

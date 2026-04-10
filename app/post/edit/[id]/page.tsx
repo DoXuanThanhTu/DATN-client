@@ -154,7 +154,6 @@ export default function ProductEditForm() {
   });
 
   const formData = watch();
-
   // --- Danh mục con ---
   const subCategories = useMemo(() => {
     if (!formData.parentCategoryId || !categories) return [];
@@ -197,8 +196,8 @@ export default function ProductEditForm() {
           description: post.description,
           price: post.price,
           priceNegotiable: post.priceNegotiable ?? false,
-          parentCategoryId: post.category._id,
-          categoryId: post.subCategory?._id ?? null,
+          parentCategoryId: post.category.parentId ?? "",
+          categoryId: post.category._id,
           province: post.location.provinceName,
           provinceCode: post.location.provinceCode,
           ward: post.location.wardName,
