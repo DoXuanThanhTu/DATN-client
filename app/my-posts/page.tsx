@@ -325,7 +325,7 @@ export default function MyPostsPage() {
           </Paper>
         </Container>
       </Box>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

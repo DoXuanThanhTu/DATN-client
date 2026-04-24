@@ -45,6 +45,8 @@ interface AddressData {
   ward: string;
   wardCode: string;
   detail: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface IProductForm {
@@ -59,6 +61,8 @@ interface IProductForm {
   ward: string;
   wardCode: string;
   detail: string;
+  lat?: number;
+  lng?: number;
   status: "pending" | "active" | "sold" | "hidden" | "rejected";
   condition: {
     label: "new" | "like_new" | "good" | "fair" | "for_parts";
@@ -643,6 +647,8 @@ export default function ProductEditForm() {
           ward: watch("ward"),
           wardCode: watch("wardCode"),
           detail: watch("detail"),
+          lat: watch("lat") ?? 21.0278,
+          lng: watch("lng") ?? 105.8342,
         }}
         onSelect={(d: AddressData) => {
           setValue("province", d.province, { shouldValidate: true });
@@ -650,6 +656,8 @@ export default function ProductEditForm() {
           setValue("ward", d.ward, { shouldValidate: true });
           setValue("wardCode", d.wardCode, { shouldValidate: true });
           setValue("detail", d.detail, { shouldValidate: true });
+          setValue("lat", d.lat, { shouldValidate: true });
+          setValue("lng", d.lng, { shouldValidate: true });
           setIsAddrModalOpen(false);
         }}
       />

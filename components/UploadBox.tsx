@@ -45,6 +45,8 @@ interface AddressData {
   ward: string;
   wardCode: string;
   detail: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface IProductForm {
@@ -59,6 +61,8 @@ interface IProductForm {
   ward: string;
   wardCode: string;
   detail: string;
+  lat?: number;
+  lng?: number;
   status: "pending" | "active" | "sold" | "hidden" | "rejected";
   condition: {
     label: "new" | "like_new" | "good" | "fair" | "for_parts";
@@ -94,6 +98,8 @@ const schema = yup.object().shape({
   ward: yup.string().required("Vui lòng chọn phường/xã"),
   wardCode: yup.string().required("Vui lòng chọn phường/xã"),
   detail: yup.string().ensure(),
+  lat: yup.number().optional(),
+  lng: yup.number().optional(),
   status: yup
     .string()
     .oneOf(["pending", "active", "sold", "hidden", "rejected"])
@@ -240,6 +246,7 @@ export default function ProductPostForm() {
 
     setIsSubmitting(true);
     try {
+      console.log(data);
       await api.post("/posts", data);
       toast.success("Đăng tin thành công!");
 
@@ -453,9 +460,9 @@ export default function ProductPostForm() {
             <button
               type="button"
               onClick={() => setIsAddrModalOpen(true)}
-              className="w-full p-4 border border-gray-200 rounded-xl flex justify-between items-center hover:bg-gray-50"
+              className="w-full p-4 border border-gray-200 rounded-xl flex justify-between items-start hover:bg-gray-50 transition-colors text-left"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-left gap-2">
                 <MapPin
                   size={20}
                   className={
@@ -465,8 +472,8 @@ export default function ProductPostForm() {
                 <span
                   className={
                     formData.province
-                      ? "text-gray-800 font-medium"
-                      : "text-gray-400"
+                      ? "text-gray-800 font-medium items-left"
+                      : "text-gray-400 items-left"
                   }
                 >
                   {formData.province
@@ -515,6 +522,8 @@ export default function ProductPostForm() {
           setValue("ward", d.ward, { shouldValidate: true });
           setValue("wardCode", d.wardCode, { shouldValidate: true });
           setValue("detail", d.detail, { shouldValidate: true });
+          setValue("lat", d.lat, { shouldValidate: true });
+          setValue("lng", d.lng, { shouldValidate: true });
           setIsAddrModalOpen(false);
         }}
       />

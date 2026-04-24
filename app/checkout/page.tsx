@@ -9,6 +9,8 @@ import {
   User,
   Phone,
   CheckCircle2,
+  CreditCard,
+  Truck,
 } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import api from "@/app/services/api";
@@ -32,7 +34,6 @@ interface IProductCheckout {
   displayPrice: number;
 }
 
-// 1. Component chứa logic chính
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const params = useParams();
@@ -42,7 +43,6 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State Thông tin nhận hàng
   const [isAddrModalOpen, setIsAddrModalOpen] = useState(false);
   const [receiverName, setReceiverName] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
@@ -54,7 +54,7 @@ function CheckoutContent() {
     detail: "",
   });
 
-  const [paymentMethod] = useState<"cod" | "transfer">("cod");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "vnpay">("cod");
 
   const type = searchParams.get("type");
   const negotiatedPrice = Number(searchParams.get("price"));
@@ -100,19 +100,21 @@ function CheckoutContent() {
   }, [productId, type, negotiatedPrice, user]);
 
   const handleCheckout = async () => {
-    if (!product) return;
+    if (!product || isSubmitting) return;
+
     if (!receiverName || !receiverPhone || !address.province) {
-      alert("Vui lòng kiểm tra lại Tên, SĐT và Địa chỉ nhận hàng!");
+      alert("Vui lòng nhập đầy đủ thông tin nhận hàng!");
       return;
     }
 
     try {
       setIsSubmitting(true);
+
       const orderData = {
         productId: product._id,
         quantity: 1,
         negotiatedPrice: type === "negotiated" ? negotiatedPrice : undefined,
-        paymentMethod: paymentMethod,
+        paymentMethod,
         shippingAddress: {
           receiverName,
           phone: receiverPhone,
@@ -120,13 +122,22 @@ function CheckoutContent() {
         },
       };
 
-      const response = await api.post("/orders", orderData);
-      if (response.data.success) {
-        router.push("/my-orders");
+      // Gửi yêu cầu tạo đơn hàng lên Backend
+      const res = await api.post("/orders", orderData);
+
+      if (res.data.success) {
+        // Nếu là VNPay, Backend sẽ trả về paymentUrl
+        if (paymentMethod === "vnpay" && res.data.paymentUrl) {
+          window.location.href = res.data.paymentUrl;
+        } else {
+          // Nếu là COD, chuyển hướng về trang quản lý đơn hàng
+          router.push("/my-orders?tab=buying");
+        }
       }
-      // eslint-disable-next-line
-    } catch (error: any) {
-      alert(error.response?.data?.message || "Có lỗi xảy ra khi đặt hàng.");
+    } catch (err: any) {
+      alert(
+        err.response?.data?.message || "Đã xảy ra lỗi trong quá trình đặt hàng",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -137,13 +148,13 @@ function CheckoutContent() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-3">
         <Loader2 className="animate-spin text-blue-600" size={40} />
         <p className="text-sm text-gray-400 font-medium">
-          Đang tải thông tin thanh toán...
+          Đang tải thông tin...
         </p>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10 text-gray-800">
+    <div className="min-h-screen bg-gray-50 pb-10 text-gray-800 font-sans">
       {/* Header */}
       <div className="bg-white p-4 flex items-center gap-4 shadow-sm sticky top-0 z-10">
         <button
@@ -220,7 +231,7 @@ function CheckoutContent() {
             </h3>
             <div className="flex items-baseline gap-1">
               <span className="text-[10px] font-bold text-gray-400 uppercase">
-                Giá bán:
+                Giá thanh toán:
               </span>
               <p className="text-blue-600 font-black text-xl">
                 {product?.displayPrice?.toLocaleString()}đ
@@ -229,16 +240,86 @@ function CheckoutContent() {
           </div>
         </div>
 
-        {/* 3. TÓM TẮT & NÚT ĐẶT HÀNG */}
+        {/* 3. PHƯƠNG THỨC THANH TOÁN */}
         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
-          <div className="space-y-3">
+          <p className="font-bold text-sm">Phương thức thanh toán</p>
+          <div className="grid gap-3">
+            <label
+              className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                paymentMethod === "cod"
+                  ? "border-blue-500 bg-blue-50/50"
+                  : "border-gray-100 hover:border-gray-200"
+              }`}
+            >
+              <input
+                type="radio"
+                name="payment"
+                className="hidden"
+                checked={paymentMethod === "cod"}
+                onChange={() => setPaymentMethod("cod")}
+              />
+              <div
+                className={`p-2 rounded-lg ${paymentMethod === "cod" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-400"}`}
+              >
+                <Truck size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold">Thanh toán khi nhận hàng</p>
+                <p className="text-[11px] text-gray-400 font-medium">
+                  Thanh toán bằng tiền mặt khi shipper giao hàng
+                </p>
+              </div>
+              {paymentMethod === "cod" && (
+                <CheckCircle2 size={20} className="text-blue-600" />
+              )}
+            </label>
+
+            <label
+              className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                paymentMethod === "vnpay"
+                  ? "border-blue-500 bg-blue-50/50"
+                  : "border-gray-100 hover:border-gray-200"
+              }`}
+            >
+              <input
+                type="radio"
+                name="payment"
+                className="hidden"
+                checked={paymentMethod === "vnpay"}
+                onChange={() => setPaymentMethod("vnpay")}
+              />
+              <div
+                className={`p-2 rounded-lg ${paymentMethod === "vnpay" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-400"}`}
+              >
+                <CreditCard size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold">
+                  Ví điện tử / Thẻ ATM (VNPAY)
+                </p>
+                <p className="text-[11px] text-gray-400 font-medium">
+                  Thanh toán online an toàn qua cổng VNPAY
+                </p>
+              </div>
+              {paymentMethod === "vnpay" && (
+                <CheckCircle2 size={20} className="text-blue-600" />
+              )}
+            </label>
+          </div>
+        </div>
+
+        {/* 4. TÓM TẮT & NÚT ĐẶT HÀNG */}
+        <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+          <div className="space-y-3 pt-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500 font-medium">
-                Tổng tiền sản phẩm
-              </span>
+              <span className="text-gray-500 font-medium">Tạm tính</span>
               <span className="font-bold">
                 {product?.displayPrice?.toLocaleString()}đ
               </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500 font-medium">Phí vận chuyển</span>
+              <span className="font-bold text-green-600">Miễn phí</span>
             </div>
             <div className="pt-3 border-t flex justify-between items-center font-bold text-xl">
               <span className="text-gray-800">Tổng thanh toán</span>
@@ -256,8 +337,8 @@ function CheckoutContent() {
             {isSubmitting ? (
               <Loader2 className="animate-spin" size={20} />
             ) : (
-              <span className="flex items-center gap-2">
-                Xác nhận đặt hàng <CheckCircle2 size={18} />
+              <span className="flex items-center gap-2 text-lg">
+                Xác nhận đặt hàng <CheckCircle2 size={20} />
               </span>
             )}
           </button>
@@ -267,7 +348,15 @@ function CheckoutContent() {
       <AddressModal
         isOpen={isAddrModalOpen}
         onClose={() => setIsAddrModalOpen(false)}
-        initialData={address}
+        initialData={{
+          province: address.province,
+          provinceCode: address.provinceCode,
+          ward: address.ward,
+          wardCode: address.wardCode,
+          detail: address.detail,
+          lat: 0,
+          lng: 0,
+        }}
         onSelect={(d: AddressData) => {
           setAddress(d);
           setIsAddrModalOpen(false);
@@ -277,16 +366,13 @@ function CheckoutContent() {
   );
 }
 
-// 2. Component xuất ra chính (đã bọc Suspense)
 export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
           <Loader2 className="animate-spin text-blue-600 mb-2" size={40} />
-          <p className="text-sm text-gray-400 font-medium">
-            Đang khởi tạo thanh toán...
-          </p>
+          <p className="text-sm text-gray-400 font-medium">Đang khởi tạo...</p>
         </div>
       }
     >

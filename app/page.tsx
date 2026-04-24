@@ -67,7 +67,7 @@ export default function HomePage() {
   return (
     <div>
       <div className="min-h-screen bg-gray-50 pb-20">
-        <div className="max-w-4xl mx-auto px-4 pt-20">
+        <div className="max-w-5xl mx-auto px-4 pt-20">
           <CategoryHierarchy
             categories={categories}
             isLoadingCats={isLoadingCats}
@@ -135,7 +135,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

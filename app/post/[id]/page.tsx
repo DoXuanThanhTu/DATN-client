@@ -271,18 +271,31 @@ export default function ProductDetail() {
 
         {/* NGƯỜI BÁN */}
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 sticky top-4">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-md">
-                {data.seller?.name?.charAt(0) || "U"}
-              </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100  top-4">
+            <Link
+              href={`/user/${data.seller._id}`}
+              className="flex items-center gap-3 mb-6"
+            >
+              {data.seller?.avatar ? (
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-sm">
+                  <img
+                    src={data.seller.avatar}
+                    alt={data.seller.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                </div>
+              ) : (
+                <div className="w-16 h-16 bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-slate-200">
+                  {data.seller?.name?.charAt(0) || "U"}
+                </div>
+              )}
               <div>
                 <p className="font-bold text-gray-900 text-lg">
                   {data.seller?.name}
                 </p>
                 <div className="text-xs mt-1 font-medium">{sellerStatus}</div>
               </div>
-            </div>
+            </Link>
             <div className="flex flex-col gap-3">
               {/* <a
                 href={`tel:${data.seller?.phone}`}
@@ -358,10 +371,10 @@ export default function ProductDetail() {
       {/* SẢN PHẨM LIÊN QUAN (MỚI THÊM) */}
       <div className="mt-12 min-h-40">
         <h2 className="text-xl font-bold flex items-center gap-2 mb-2 text-gray-800">
-          Tin đăng tương tự
+          Dành cho bạn
         </h2>
         {related.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:w-185   gap-4">
             {related.map((item) => (
               <Link key={item._id} href={`/post/${item._id}`} className="group">
                 <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 h-full flex flex-col">

@@ -18,7 +18,7 @@ function OrderManagementContent() {
   return (
     <div className="min-h-screen pb-20 bg-white/80 backdrop-blur-md">
       {/* Top Navigation Bar */}
-      <div className="px-4 pt-6 pb-4 sticky top-0 z-30">
+      <div className="px-4 pt-6 pb-4 top-0 z-30">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-center mb-5">
             <h1 className="text-lg font-bold text-gray-900 tracking-tight">

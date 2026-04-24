@@ -89,7 +89,7 @@ export default function MySalesList() {
   return (
     <div className="space-y-4">
       {/* Tab điều hướng trạng thái */}
-      <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar border-b border-gray-100 sticky top-[104px] bg-gray-50/80 backdrop-blur-md z-10 px-1">
+      <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar border-b border-gray-100  top-[104px] bg-gray-50/80 backdrop-blur-md z-10 px-1">
         {ORDER_STATUSES.map((status) => (
           <button
             key={status.key}

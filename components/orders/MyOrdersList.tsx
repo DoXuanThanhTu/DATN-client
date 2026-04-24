@@ -2,7 +2,15 @@
 
 import { useEffect, useState, useCallback } from "react";
 import api from "@/app/services/api";
-import { Loader2, Package, Store, MapPin } from "lucide-react";
+import {
+  Loader2,
+  Package,
+  Store,
+  MapPin,
+  ShoppingBag,
+  CheckCircle2,
+  Plus,
+} from "lucide-react";
 import ReviewModal from "./ReviewModal";
 
 // --- INTERFACES ---
@@ -28,11 +36,13 @@ interface IOrder {
   _id: string;
   orderNumber: string;
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  paymentStatus: "pending" | "paid";
   product: OrderProduct;
   seller: OrderSeller;
   unitPrice: number;
   shippingAddress: ShippingAddress;
   isReviewed: boolean;
+  totalAmount: number;
 }
 
 const ORDER_STATUSES = [
@@ -42,6 +52,10 @@ const ORDER_STATUSES = [
   { key: "shipped", label: "Đang giao" },
   { key: "delivered", label: "Đã giao" },
   { key: "cancelled", label: "Đã hủy" },
+] as const;
+const PAYMENT_STATUSES = [
+  { key: "pending", label: "Chờ thanh toán" },
+  { key: "paid", label: "Đã thanh toán" },
 ] as const;
 
 export default function MyOrdersList() {
@@ -86,7 +100,7 @@ export default function MyOrdersList() {
   return (
     <div className="space-y-4">
       {/* Sub-tabs cuộn ngang */}
-      <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar border-b border-gray-100 sticky top-[104px] bg-gray-50/80 backdrop-blur-md z-10 px-1">
+      <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar border-b border-gray-100  top-[104px] bg-gray-50/80 backdrop-blur-md z-10 px-1">
         {ORDER_STATUSES.map((status) => (
           <button
             key={status.key}
@@ -121,51 +135,83 @@ export default function MyOrdersList() {
           {orders.map((order) => (
             <div
               key={order._id}
-              className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 hover:shadow-md transition-shadow space-y-4"
+              className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 space-y-6"
             >
-              {/* Header: Mã & Trạng thái */}
-              <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  #{order.orderNumber}
-                </span>
-                <span
-                  className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider ${
-                    order.status === "cancelled"
-                      ? "bg-red-50 text-red-500"
-                      : order.status === "delivered"
-                        ? "bg-green-50 text-green-600"
-                        : "bg-blue-50 text-blue-600"
-                  }`}
-                >
-                  {ORDER_STATUSES.find((s) => s.key === order.status)?.label ||
-                    order.status}
-                </span>
+              {/* Header: Mã đơn & Trạng thái song song */}
+              <div className="flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-slate-50">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    Mã đơn hàng
+                  </p>
+                  <span className="text-sm font-black text-slate-900 tracking-tight">
+                    #{order.orderNumber}
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  {/* Payment Status Badge */}
+                  <span
+                    className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-sm ${
+                      order.paymentStatus === "paid"
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-amber-50 text-amber-600"
+                    }`}
+                  >
+                    {PAYMENT_STATUSES.find((s) => s.key === order.paymentStatus)
+                      ?.label || order.paymentStatus}
+                  </span>
+
+                  {/* Order Status Badge */}
+                  <span
+                    className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-sm ${
+                      order.status === "cancelled"
+                        ? "bg-rose-50 text-rose-500"
+                        : order.status === "delivered"
+                          ? "bg-emerald-500 text-white"
+                          : "bg-slate-900 text-white"
+                    }`}
+                  >
+                    {ORDER_STATUSES.find((s) => s.key === order.status)
+                      ?.label || order.status}
+                  </span>
+                </div>
               </div>
 
-              {/* Sản phẩm */}
-              <div className="flex gap-4">
-                <img
-                  src={order.product?.images[0]}
-                  alt={order.product?.title}
-                  className="w-20 h-20 rounded-2xl object-cover bg-gray-50 border border-gray-100"
-                />
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
-                  <h4 className="font-bold text-[14px] text-gray-800 line-clamp-2 leading-tight">
-                    {order.product?.title}
-                  </h4>
+              {/* Sản phẩm: Layout rộng rãi hơn */}
+              <div className="flex gap-6">
+                <div className="relative group">
+                  <img
+                    src={order.product?.images[0]}
+                    alt={order.product?.title}
+                    className="w-24 h-24 md:w-28 md:h-28 rounded-[2rem] object-cover bg-slate-50 border border-slate-100 group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute -bottom-2 -right-2 bg-white shadow-lg rounded-full w-8 h-8 flex items-center justify-center border border-slate-50">
+                    <ShoppingBag size={14} className="text-slate-900" />
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col justify-between py-1">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-gray-400 line-through">
-                        {order.product?.price?.toLocaleString()}đ
+                    <h4 className="font-black text-lg text-slate-900 line-clamp-1 leading-none mb-2 tracking-tight">
+                      {order.product?.title}
+                    </h4>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl font-black text-blue-600 tracking-tighter">
+                        {order.totalAmount?.toLocaleString()}đ
                       </span>
-                      <span className="text-sm font-black text-blue-600">
-                        {order.unitPrice?.toLocaleString()}đ
-                      </span>
+                      {/* <span className="text-xs text-slate-400 font-bold tracking-widest uppercase">
+                        x1 sản phẩm
+                      </span> */}
                     </div>
-                    <p className="text-[11px] text-gray-500 flex items-center gap-1.5 font-medium">
-                      <Store size={12} className="text-gray-400" />
-                      Bán bởi:{" "}
-                      <span className="text-blue-500">
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
+                      <Store size={12} className="text-slate-500" />
+                    </div>
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                      Shop:{" "}
+                      <span className="text-blue-600">
                         {order.seller?.name}
                       </span>
                     </p>
@@ -173,44 +219,51 @@ export default function MyOrdersList() {
                 </div>
               </div>
 
-              {/* Thông tin giao hàng */}
-              <div className="bg-gray-50 rounded-2xl p-3 text-[11px] text-gray-600 space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-gray-800">
-                  <MapPin size={12} className="text-blue-500" /> Địa chỉ nhận
-                  hàng
+              {/* Địa chỉ: Card-in-Card style */}
+              <div className="bg-slate-50/80 rounded-[1.8rem] p-5 border border-slate-100/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 bg-blue-100 rounded-lg">
+                    <MapPin size={12} className="text-blue-600" />
+                  </div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
+                    Thông tin giao nhận
+                  </span>
                 </div>
-                <div className="pl-4 border-l-2 border-blue-100 ml-1.5">
-                  <p className="font-bold text-gray-700">
-                    {order.shippingAddress?.receiverName} •{" "}
+                <div className="space-y-1">
+                  <p className="font-black text-slate-800 text-sm">
+                    {order.shippingAddress?.receiverName}
+                    <span className="mx-2 text-slate-300 font-normal">|</span>
                     {order.shippingAddress?.phone}
                   </p>
-                  <p className="line-clamp-1 text-gray-500">
+                  <p className="text-slate-500 text-xs font-medium leading-relaxed">
                     {order.shippingAddress?.fullAddress}
                   </p>
                 </div>
               </div>
 
-              {/* Hành động */}
-              <div className="pt-1">
+              {/* Hành động: Full width & High Contrast */}
+              <div className="pt-2">
                 {order.status === "shipped" && (
                   <button
                     onClick={() => handleUpdateStatus(order._id, "delivered")}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-sm transition-all active:scale-[0.98] shadow-lg shadow-blue-100"
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl font-black text-sm transition-all active:scale-[0.97] shadow-xl shadow-slate-200 flex items-center justify-center gap-2"
                   >
-                    Xác nhận đã nhận hàng
+                    <CheckCircle2 size={18} /> Xác nhận đã nhận hàng
                   </button>
                 )}
+
                 {order.status === "delivered" && !order.isReviewed && (
                   <button
                     onClick={() => openReviewModal(order)}
-                    className="w-full bg-white border-2 border-blue-600 text-blue-600 py-3 rounded-xl font-bold text-sm transition-all hover:bg-blue-50 active:scale-[0.98]"
+                    className="w-full bg-white border-2 border-slate-200 text-slate-900 py-4 rounded-2xl font-black text-sm transition-all hover:border-slate-900 active:scale-[0.97] flex items-center justify-center gap-2"
                   >
-                    Đánh giá người bán
+                    <Plus size={18} /> Viết đánh giá sản phẩm
                   </button>
                 )}
+
                 {order.isReviewed && (
-                  <div className="text-center py-2 text-green-600 font-bold text-[11px] bg-green-50 rounded-lg italic">
-                    ✓ Bạn đã hoàn thành đánh giá cho đơn hàng này
+                  <div className="flex items-center justify-center gap-2 py-4 bg-emerald-50 rounded-2xl text-emerald-600 font-black text-xs uppercase tracking-widest border border-emerald-100">
+                    <CheckCircle2 size={16} /> Hoàn thành đánh giá
                   </div>
                 )}
               </div>

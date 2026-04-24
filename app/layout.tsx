@@ -9,8 +9,9 @@ import "react-toastify/dist/ReactToastify.css";
 import "./globals.css";
 import Preloader from "@/components/Preloader";
 import MaterialUIProviders from "@/components/Providers";
-import Footer from "@/components/Footer";
 import { SocketManager } from "@/providers/SocketManager";
+import "maplibre-gl/dist/maplibre-gl.css";
+import FooterWrapper from "@/components/FooterWrapper";
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
   subsets: ["latin", "vietnamese"],
@@ -38,7 +39,8 @@ export default function RootLayout({
             <Preloader />
             <NavbarWrapper />
 
-            <main className="flex-1">{children}</main>
+            <main className="flex-1 flex flex-col">{children}</main>
+            <FooterWrapper />
             <ToastContainer
               position="top-right"
               autoClose={2000}

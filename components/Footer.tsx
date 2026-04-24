@@ -9,6 +9,7 @@ import {
   Stack,
 } from "@mui/material";
 import { Facebook, YouTube, Instagram } from "@mui/icons-material";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
   return (
