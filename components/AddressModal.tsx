@@ -345,11 +345,7 @@ export default function AddressModal({
         {/* Footer */}
         <div className="p-6 border-t border-gray-100 bg-gray-50/50 shrink-0">
           <button
-            disabled={
-              !address.ward ||
-              !address.province ||
-              (!address.detail && !mapPreviewAddress)
-            }
+            disabled={!address.ward || !address.province}
             onClick={() => {
               onSelect({
                 ...address,
@@ -357,7 +353,7 @@ export default function AddressModal({
               });
               onClose();
             }}
-            className="w-full py-4 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-200 text-white font-black rounded-2xl uppercase transition-all active:scale-[0.98] shadow-xl shadow-orange-200"
+            className="w-full py-4 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-200 text-white font-black rounded-2xl uppercase transition-all active:scale-[0.98"
           >
             Lưu địa chỉ này
           </button>
