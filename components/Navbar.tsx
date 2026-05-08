@@ -24,6 +24,17 @@ export default function Navbar() {
   const user = useHydratedStore(useAuthStore, (state) => state.user);
   const { disconnectSocket, getNotifications } = useChatStore();
   const isHydrating = user === undefined;
+  const trackSearch = async (keyword: string) => {
+    if (!user || !keyword.trim()) return;
+    try {
+      await api.post("/users/interaction", {
+        type: "search",
+        keyword: keyword.trim(),
+      });
+    } catch (error) {
+      console.error("Failed to track search:", error);
+    }
+  };
   useEffect(() => {
     if (user?.id) {
       // 1. Cứ đăng nhập xong là kết nối Socket ngay, không đợi vào trang chat
@@ -75,6 +86,7 @@ export default function Navbar() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
+      trackSearch(searchTerm);
       router.push(`/search?keyword=${searchTerm}`);
       setShowResults(false);
     }
@@ -133,8 +145,11 @@ export default function Navbar() {
                     {searchResults.map((post: any) => (
                       <Link
                         key={post._id}
-                        href={`/post/${post.slug}`}
-                        onClick={() => setShowResults(false)}
+                        href={`/post/${post._id}`}
+                        onClick={() => {
+                          trackSearch(searchTerm);
+                          setShowResults(false);
+                        }}
                         className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                       >
                         <img

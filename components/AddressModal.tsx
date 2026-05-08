@@ -4,14 +4,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useLocationData } from "@/hooks/useLocationData";
 import SelectionOverlay from "./SelectionOverlay";
 import GoongMap from "@/components/map/GoongMap";
-import {
-  ChevronRight,
-  X,
-  MapPin,
-  Navigation,
-  Search,
-  Loader2,
-} from "lucide-react";
+import { ChevronRight, X, MapPin, Search, Loader2 } from "lucide-react";
 
 const GOONG_API_KEY = "uWnZhSu6PnSQLjSecNxaVLa14bGwsKLkFw6ZnKIa";
 
@@ -30,8 +23,8 @@ interface AddressState {
   ward: string;
   wardCode: string;
   detail: string;
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
 }
 
 interface AddressModalProps {
@@ -53,8 +46,8 @@ export default function AddressModal({
     ward: initialData?.ward || "",
     wardCode: initialData?.wardCode || "",
     detail: initialData?.detail || "",
-    lat: initialData?.lat || 21.0285,
-    lng: initialData?.lng || 105.8542,
+    lat: initialData?.lat,
+    lng: initialData?.lng,
   }));
 
   const [mapPreviewAddress, setMapPreviewAddress] = useState("");
@@ -64,25 +57,24 @@ export default function AddressModal({
   const [step, setStep] = useState<number | null>(null);
   const [predictions, setPredictions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Ref để xử lý click ra ngoài đóng gợi ý
   const autocompleteRef = useRef<HTMLDivElement>(null);
   const isAutoFilling = useRef(false);
 
   const { data, isLoading: isLocationLoading } = useLocationData();
   const locations = data as IProvince[] | undefined;
 
-  // Xử lý sự kiện click toàn cục để đóng Autocomplete
+  // Xử lý click ra ngoài để đóng gợi ý
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         autocompleteRef.current &&
         !autocompleteRef.current.contains(event.target as Node)
       ) {
-        setPredictions([]); // Đóng danh sách gợi ý
+        setPredictions([]);
       }
     };
-
     if (predictions.length > 0) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -91,13 +83,7 @@ export default function AddressModal({
 
   // Logic Autocomplete
   useEffect(() => {
-    if (isAutoFilling.current) {
-      isAutoFilling.current = false;
-      setPredictions([]);
-      return;
-    }
-
-    if (address.detail.length < 2) {
+    if (isAutoFilling.current || address.detail.length < 2) {
       setPredictions([]);
       return;
     }
@@ -119,7 +105,7 @@ export default function AddressModal({
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [address.detail]);
+  }, [address.detail, address.ward, address.province]);
 
   const handleSelectPrediction = async (prediction: any) => {
     try {
@@ -141,7 +127,11 @@ export default function AddressModal({
       setHasEnteredDetail(true);
       setMapPreviewAddress("");
     } catch (error) {
-      isAutoFilling.current = false;
+      console.error("Select prediction error:", error);
+    } finally {
+      setTimeout(() => {
+        isAutoFilling.current = false;
+      }, 500);
     }
   };
 
@@ -156,12 +146,50 @@ export default function AddressModal({
   };
 
   const fullAddressPreview = useMemo(() => {
-    // if (mapPreviewAddress) return mapPreviewAddress;
+    if (mapPreviewAddress) return mapPreviewAddress;
     const parts = [address.detail, address.ward, address.province].filter(
       Boolean,
     );
     return parts.join(", ");
   }, [address, mapPreviewAddress]);
+
+  // Logic lưu địa chỉ và xử lý Geocoding nếu thiếu tọa độ
+  const handleSaveAddress = async () => {
+    if (!address.province || !address.ward) return;
+
+    setIsSubmitting(true);
+    try {
+      let finalLat = address.lat;
+      let finalLng = address.lng;
+
+      // Nếu người dùng chưa tương tác bản đồ/chọn gợi ý (thiếu lat/lng)
+      if (!finalLat || !finalLng) {
+        const fullAddr = `${address.detail ? address.detail + ", " : ""}${address.ward}, ${address.province}`;
+        const res = await fetch(
+          `https://rsapi.goong.io/geocode?address=${encodeURIComponent(fullAddr)}&api_key=${GOONG_API_KEY}`,
+        );
+        const data = await res.json();
+
+        if (data.results && data.results.length > 0) {
+          const { lat, lng } = data.results[0].geometry.location;
+          finalLat = lat;
+          finalLng = lng;
+        }
+      }
+
+      onSelect({
+        ...address,
+        lat: finalLat,
+        lng: finalLng,
+        detail: mapPreviewAddress || address.detail,
+      });
+      onClose();
+    } catch (error) {
+      console.error("Lỗi khi lưu địa chỉ:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const currentListData = useMemo((): string[] => {
     if (!locations) return [];
@@ -218,7 +246,7 @@ export default function AddressModal({
           </button>
         </div>
 
-        {/* Nội dung Form */}
+        {/* Form Content */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
@@ -263,7 +291,7 @@ export default function AddressModal({
             </div>
           </div>
 
-          {/* Bọc phần Textarea và Dropdown vào Ref */}
+          {/* Autocomplete Section */}
           <div className="space-y-1 relative" ref={autocompleteRef}>
             <label className="text-[11px] font-black text-gray-400 uppercase ml-1">
               Địa chỉ cụ thể
@@ -275,7 +303,6 @@ export default function AddressModal({
                 placeholder="Số nhà, tên đường..."
                 value={address.detail}
                 onChange={(e) => {
-                  isAutoFilling.current = false;
                   setAddress({ ...address, detail: e.target.value });
                   setMapPreviewAddress("");
                   if (e.target.value.trim().length > 0)
@@ -291,7 +318,6 @@ export default function AddressModal({
               </div>
             </div>
 
-            {/* Dropdown gợi ý */}
             {predictions.length > 0 && (
               <div className="absolute z-[3000] left-0 right-0 top-full mt-2 bg-white shadow-2xl rounded-2xl border border-gray-100 max-h-[220px] overflow-y-auto">
                 {predictions.map((item: any) => (
@@ -315,14 +341,19 @@ export default function AddressModal({
             )}
           </div>
 
+          {/* Map Preview */}
           {hasEnteredDetail && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-4 duration-500">
               <label className="text-[11px] font-black text-gray-400 uppercase ml-1">
-                Địa chỉ chính xác{" "}
+                Vị trí xác định trên bản đồ
               </label>
               <div className="w-full h-[250px] rounded-3xl overflow-hidden relative border-2 border-gray-50 shadow-inner">
                 <GoongMap
-                  center={[address.lng, address.lat]}
+                  center={
+                    address.lng && address.lat
+                      ? [address.lng, address.lat]
+                      : [105.8542, 21.0285]
+                  }
                   onChange={handleMapChange}
                 />
               </div>
@@ -345,17 +376,18 @@ export default function AddressModal({
         {/* Footer */}
         <div className="p-6 border-t border-gray-100 bg-gray-50/50 shrink-0">
           <button
-            disabled={!address.ward || !address.province}
-            onClick={() => {
-              onSelect({
-                ...address,
-                detail: mapPreviewAddress || address.detail,
-              });
-              onClose();
-            }}
-            className="w-full py-4 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-200 text-white font-black rounded-2xl uppercase transition-all active:scale-[0.98"
+            disabled={!address.ward || !address.province || isSubmitting}
+            onClick={handleSaveAddress}
+            className="w-full py-4 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-200 text-white font-black rounded-2xl uppercase transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           >
-            Lưu địa chỉ này
+            {isSubmitting ? (
+              <>
+                <Loader2 className="animate-spin" size={20} />
+                Đang xác minh tọa độ...
+              </>
+            ) : (
+              "Lưu địa chỉ này"
+            )}
           </button>
         </div>
 

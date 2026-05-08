@@ -215,6 +215,8 @@ export default function ProductEditForm() {
             warranty: post.condition.warranty ?? "Không bảo hành",
           },
           images: post.images,
+          lat: post.location.lat,
+          lng: post.location.lng,
         };
 
         reset(formValues);
@@ -647,8 +649,8 @@ export default function ProductEditForm() {
           ward: watch("ward"),
           wardCode: watch("wardCode"),
           detail: watch("detail"),
-          lat: watch("lat") ?? 21.0278,
-          lng: watch("lng") ?? 105.8342,
+          lat: watch("lat"),
+          lng: watch("lng"),
         }}
         onSelect={(d: AddressData) => {
           setValue("province", d.province, { shouldValidate: true });

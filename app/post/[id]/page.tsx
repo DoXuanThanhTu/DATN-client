@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   MapPin,
   Clock,
@@ -59,12 +59,13 @@ export default function ProductDetail() {
   const params = useParams();
   const identity = params?.id;
   const router = useRouter();
-
+  const isTracked = useRef<string | null>(null);
   const { user: currentUser } = useAuthStore();
   const { selectUser, getConversations } = useChatStore();
 
   const [data, setData] = useState<ProductData | null>(null);
   const [related, setRelated] = useState<ProductData[]>([]); // Lưu sản phẩm liên quan
+  const [recommendations, setRecommendations] = useState<ProductData[]>([]);
   const [activeImg, setActiveImg] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isNegotiateOpen, setIsNegotiateOpen] = useState(false);
@@ -109,25 +110,38 @@ export default function ProductDetail() {
   };
   useEffect(() => {
     if (!identity) return;
+
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
-        // Controller mới trả về { success, data, related }
         const response = await api.get<{
           data: ProductData;
           related: ProductData[];
         }>(`/posts/${identity}`);
+
         setData(response.data.data);
         setRelated(response.data.related || []);
-        setActiveImg(0); // Reset ảnh về tấm đầu tiên khi đổi sản phẩm
+        setActiveImg(0);
+
+        // CHỈ TRACK NẾU IDENTITY NÀY CHƯA ĐƯỢC TRACK TRONG LẦN MOUNT NÀY
+        // if (isTracked.current !== identity) {
+        await api.post("/users/interaction", {
+          type: "view",
+          post: identity,
+        });
+        const recommendations = await api.get(`/recommend/hybrid/${identity}`);
+        setRecommendations(recommendations.data.data);
+        // isTracked.current = identity || "";
+        // }
       } catch (error) {
         console.error("Lỗi khi lấy sản phẩm:", error);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchProduct();
-    window.scrollTo(0, 0); // Cuộn lên đầu trang khi xem sản phẩm khác
+    window.scrollTo(0, 0);
   }, [identity]);
 
   const handleChat = async () => {
@@ -371,11 +385,51 @@ export default function ProductDetail() {
       {/* SẢN PHẨM LIÊN QUAN (MỚI THÊM) */}
       <div className="mt-12 min-h-40">
         <h2 className="text-xl font-bold flex items-center gap-2 mb-2 text-gray-800">
-          Dành cho bạn
+          Bài đăng cùng danh mục
         </h2>
         {related.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:w-185   gap-4">
             {related.map((item) => (
+              <Link key={item._id} href={`/post/${item._id}`} className="group">
+                <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 h-full flex flex-col">
+                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                    <img
+                      src={item.images?.[0] || "/placeholder.png"}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="p-3 flex flex-col flex-1 justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-800 line-clamp-2 min-h-[2.5rem]">
+                        {item.title}
+                      </h4>
+                      <p className="text-red-600 font-bold text-sm mt-1">
+                        {item.price.toLocaleString()} đ
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-2">
+                      <MapPin size={12} />
+                      <span className="truncate">
+                        {item.location?.provinceName || "Toàn quốc"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className=" text-gray-500">Không có tin đăng liên quan</div>
+        )}
+      </div>
+      <div className="mt-12 min-h-40">
+        <h2 className="text-xl font-bold flex items-center gap-2 mb-2 text-gray-800">
+          Có thể bạn quan tâm
+        </h2>
+        {recommendations.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:w-185   gap-4">
+            {recommendations.slice(0, 8).map((item) => (
               <Link key={item._id} href={`/post/${item._id}`} className="group">
                 <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 h-full flex flex-col">
                   <div className="aspect-square bg-gray-100 relative overflow-hidden">

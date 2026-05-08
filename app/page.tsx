@@ -1,13 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { MapPin, Flame, Loader2, Clock, Plus } from "lucide-react";
+import {
+  MapPin,
+  Flame,
+  Loader2,
+  Clock,
+  Plus,
+  Sparkles,
+  SearchCheckIcon,
+  SearchSlash,
+  SearchIcon,
+} from "lucide-react";
 import Link from "next/link";
 import api from "@/app/services/api";
 import { useCategoryData } from "@/hooks/useCategoryData";
 import CategoryHierarchy from "@/components/CategoryHierarchy";
 import Footer from "@/components/Footer";
 import formatDate from "@/utils/formatDate";
+import { getRecommendCache, setRecommendCache } from "@/utils/recommendCache";
+import { useAuthStore } from "./store/useAuthStore";
 interface Product {
   _id: string;
   title: string;
@@ -18,18 +30,82 @@ interface Product {
     provinceName: string;
   };
 }
+const ProductCard = ({ p }: { p: Product }) => (
+  <Link href={`/post/${p._id}`} className="group">
+    <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col h-full border border-gray-100">
+      <div className="relative aspect-square overflow-hidden bg-gray-100">
+        <img
+          src={p.images[0] || "/no-image.png"}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          alt={p.title}
+        />
+      </div>
+      <div className="p-3 flex flex-col flex-1 justify-between">
+        <p className="text-sm font-medium text-gray-800 line-clamp-2 min-h-[2.5rem]">
+          {p.title}
+        </p>
+        <p className="text-orange-600 font-bold">
+          {p.price.toLocaleString()} đ
+        </p>
+        <div className="mt-3 pt-2 border-t border-gray-50 flex items-center text-[10px] text-gray-400 justify-between">
+          <span className="truncate">
+            {p.location?.provinceName || "Toàn quốc"}
+          </span>
+          <span>{formatDate(p.createdAt)}</span>
+        </div>
+      </div>
+    </div>
+  </Link>
+);
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
-
+  const [recommendProducts, setRecommendProducts] = useState<Product[]>([]);
+  const [searchRecommendProducts, setSearchRecommendProducts] = useState<
+    Product[]
+  >([]);
+  const [forYouProducts, setForYouProducts] = useState<Product[]>([]);
   // --- MỚI: Quản lý phân trang ---
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const LIMIT = 8; // Chỉ hiện 8 tin mỗi lần
 
   const { data: categories = [], isLoading: isLoadingCats } = useCategoryData();
+  const { user } = useAuthStore();
+  const fetchRecommendations = async () => {
+    try {
+      // 1. check cache trước
+      // const cached = getRecommendCache();
+      // if (cached) {
+      //   console.log("⚡ recommend cache hit");
+      //   setRecommendProducts(cached);
+      //   return;
+      // }
 
+      // console.log("🌐 fetch recommend API");
+
+      // const res = await api.get(`/recommend/get-content-based`);
+
+      // const data = res.data.data || [];
+
+      // setRecommendProducts(data);
+
+      // // 2. save cache
+      // setRecommendCache(data);
+      if (user) {
+        console.log("🌐 fetch search recommend API", user);
+        const searchRes = await api.get(`/recommend/search/${user.id}`);
+        const search_data = searchRes.data.data || [];
+        setSearchRecommendProducts(search_data);
+      }
+    } catch (error) {
+      console.error("Lỗi fetch gợi ý:", error);
+
+      // fallback: không crash UI
+      setRecommendProducts([]);
+    }
+  };
   const fetchProducts = async (page: number) => {
     try {
       if (page === 1) setIsLoading(true);
@@ -56,6 +132,15 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchProducts(1);
+    fetchRecommendations();
+    const fetchForYou = async () => {
+      // const forYouRes = await api.get(`/recommend/for-user`);
+      const forYouRes = await api.get(`/posts/recommended`);
+
+      const forYou_data = forYouRes.data.data || [];
+      setForYouProducts(forYou_data);
+    };
+    fetchForYou();
   }, []);
 
   const handleLoadMore = () => {
@@ -133,6 +218,43 @@ export default function HomePage() {
               </>
             )}
           </div>
+          {/* <div className="mt-8">
+            <h2 className="font-bold flex items-center gap-2 mb-4 text-gray-800">
+              <Sparkles className="text-blue-500 fill-blue-100" size={20} />
+              Dành cho bạn
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {recommendProducts.map((p) => (
+                <ProductCard key={`rec-${p._id}`} p={p} />
+              ))}
+            </div>
+          </div> */}
+          {searchRecommendProducts && searchRecommendProducts.length > 0 && (
+            <div className="mt-8">
+              <h2 className="font-bold flex items-center gap-2 mb-4 text-gray-800">
+                <SearchIcon className="text-blue-500 fill-blue-100" size={20} />
+                Vì bạn đã tìm kiếm{" "}
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {searchRecommendProducts.map((p) => (
+                  <ProductCard key={`rec-${p._id}`} p={p} />
+                ))}
+              </div>
+            </div>
+          )}
+          {forYouProducts && forYouProducts.length > 0 && (
+            <div className="mt-8">
+              <h2 className="font-bold flex items-center gap-2 mb-4 text-gray-800">
+                <Sparkles className="text-blue-500 fill-blue-100" size={20} />
+                Dành cho bạn
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {forYouProducts.map((p) => (
+                  <ProductCard key={`rec-${p._id}`} p={p} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {/* <Footer /> */}
