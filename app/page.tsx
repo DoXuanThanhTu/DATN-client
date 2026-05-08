@@ -134,8 +134,8 @@ export default function HomePage() {
     fetchProducts(1);
     fetchRecommendations();
     const fetchForYou = async () => {
-      // const forYouRes = await api.get(`/recommend/for-user`);
-      const forYouRes = await api.get(`/posts/recommended`);
+      const forYouRes = await api.get(`/recommend/for-user`);
+      // const forYouRes = await api.get(`/posts/recommended`);
 
       const forYou_data = forYouRes.data.data || [];
       setForYouProducts(forYou_data);
