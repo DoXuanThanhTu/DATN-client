@@ -12,6 +12,7 @@ import MaterialUIProviders from "@/components/Providers";
 import { SocketManager } from "@/providers/SocketManager";
 import "maplibre-gl/dist/maplibre-gl.css";
 import FooterWrapper from "@/components/FooterWrapper";
+import NextTopLoader from "nextjs-toploader";
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
   subsets: ["latin", "vietnamese"],
@@ -32,6 +33,17 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${roboto.variable} h-full antialiased`}>
       <body className={`${roboto.className} min-h-full flex flex-col`}>
+        <NextTopLoader
+          color="#f97316"
+          initialPosition={0.08}
+          crawlSpeed={200}
+          height={3}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+          shadow="0 0 10px #f97316,0 0 5px #f97316"
+        />
         <SocketManager />
         <MaterialUIProviders>
           <Providers>

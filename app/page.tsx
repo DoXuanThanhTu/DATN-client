@@ -135,8 +135,6 @@ export default function HomePage() {
     fetchRecommendations();
     const fetchForYou = async () => {
       const forYouRes = await api.get(`/recommend/for-user`);
-      // const forYouRes = await api.get(`/posts/recommended`);
-
       const forYou_data = forYouRes.data.data || [];
       setForYouProducts(forYou_data);
     };
@@ -200,13 +198,12 @@ export default function HomePage() {
                   ))}
                 </div>
 
-                {/* --- MỚI: Nút Xem thêm --- */}
                 {hasMore && (
                   <div className="mt-8 flex justify-center">
                     <button
                       onClick={handleLoadMore}
                       disabled={isFetchingMore}
-                      className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-500 text-white-600 font-bold rounded-2xl hover:bg-orange-50 transition-all disabled:opacity-50"
+                      className="flex items-center gap-2 px-6 py-2 pl-16 pr-16 cursor-pointer bg-white border border-gray-400 text-gray-600 font-bold rounded-2xl hover:bg-gray-100 transition-all"
                     >
                       {isFetchingMore ? (
                         <Loader2 className="animate-spin" size={18} />

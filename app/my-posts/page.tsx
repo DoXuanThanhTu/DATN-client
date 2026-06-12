@@ -220,32 +220,46 @@ export default function MyPostsPage() {
                   <Box key={post._id}>
                     <Box sx={{ p: 2, display: "flex", gap: 2 }}>
                       {/* Hình ảnh sản phẩm */}
-                      <Box
-                        component="img"
-                        src={
-                          post.images[0] || "https://via.placeholder.com/100"
-                        }
-                        sx={{
-                          width: 100,
-                          height: 100,
-                          borderRadius: 1,
-                          objectFit: "cover",
-                          bgcolor: "#eee",
-                        }}
-                      />
+                     {post.status === "active" ? (
+                        <Link href={`/post/${post._id}`}>
+                          <Box
+                            component="img"
+                            src={post.images[0] || "https://via.placeholder.com/100"}
+                            sx={{
+                              width: 100,
+                              height: 100,
+                              borderRadius: 1,
+                              objectFit: "cover",
+                             
+                            }}
+                          />
+                        </Link>
+                      ) : (
+                        <Box
+                          component="img"
+                          src={post.images[0] || "https://via.placeholder.com/100"}
+                          sx={{
+                            width: 100,
+                            height: 100,
+                            borderRadius: 1,
+                            objectFit: "cover",
+                          }}
+                        />
+                      )}
 
                       {/* Thông tin sản phẩm */}
                       <Stack spacing={0.5} sx={{ flex: 1 }}>
-                        <Typography
-                          variant="subtitle1"
-                          sx={{
-                            fontWeight: "bold",
-                            lineHeight: 1.3,
-                            color: "#222",
-                          }}
-                        >
-                          {post.title}
-                        </Typography>
+                       {post.status === "active" ? (
+                          <Link href={`/post/${post._id}`}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1.3, color: "#222" }}>
+                              {post.title}
+                            </Typography>
+                          </Link>
+                        ) : (
+                          <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1.3, color: "#222" }}>
+                            {post.title}
+                          </Typography>
+                        )}
                         <Typography
                           sx={{
                             color: "#d0021b",

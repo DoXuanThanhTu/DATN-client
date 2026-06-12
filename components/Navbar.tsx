@@ -46,7 +46,6 @@ export default function Navbar() {
       disconnectSocket();
     }
   }, [user, disconnectSocket, getNotifications]);
-  // 1. Xử lý Debounce Search
   useEffect(() => {
     if (!searchTerm.trim()) {
       setSearchResults([]);
@@ -64,12 +63,11 @@ export default function Navbar() {
       } finally {
         setIsLoading(false);
       }
-    }, 500); // Chờ 500ms sau khi ngừng gõ mới gọi API
+    }, 500);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
-  // 2. Đóng kết quả khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -108,9 +106,9 @@ export default function Navbar() {
           <div className="flex items-center gap-4 shrink-0">
             <Link
               href="/"
-              className="text-orange-500 font-black text-2xl italic tracking-tighter"
+              className="text-orange-500 font-black text-2xl italic "
             >
-              CHỢ TỐT
+              CHỢ VIỆT
             </Link>
           </div>
 

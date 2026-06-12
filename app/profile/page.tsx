@@ -17,6 +17,7 @@ import {
   Star,
   Check,
   MessageSquare,
+  Heart,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { formatDistanceToNow } from "date-fns";
@@ -26,6 +27,7 @@ import api from "@/app/services/api";
 import { uploadFile } from "@/services/upload.service";
 import AddressModal from "@/components/AddressModal";
 import { useAuthStore } from "../store/useAuthStore";
+import Link from "next/link";
 
 // --- Interfaces ---
 interface IAddress {
@@ -83,8 +85,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<IUserResponse | null>(null);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-
-  // State cho 3 Tabs
+const [savedPosts, setSavedPosts] = useState<any[]>([]);
+const [savedPostIds, setSavedPostIds] = useState<Set<string>>(new Set());  
   const [activeTab, setActiveTab] = useState<ReviewTab>("fromBuyers");
   const [reviews, setReviews] = useState<IReview[]>([]);
 
@@ -116,7 +118,40 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchReviews();
   }, [activeTab]);
-
+const fetchSavedPosts = async () => {
+  try {
+    const res = await api.get("/favorites");
+    const posts = res.data.data || [];
+    setSavedPosts(posts);
+    setSavedPostIds(new Set(posts.map((item: any) => item.post._id)));
+  } catch (error) {
+    console.log(error);
+  }
+};
+const toggleSave = async (postId: string) => {
+  const isSaved = savedPostIds.has(postId);
+  // Optimistic update
+  setSavedPostIds((prev) => {
+    const next = new Set(prev);
+    isSaved ? next.delete(postId) : next.add(postId);
+    return next;
+  });
+  try {
+    await api.post(`/favorites/${postId}`);
+    toast.success(isSaved ? "Đã bỏ lưu tin" : "Đã lưu tin");
+  } catch (error) {
+    // Rollback nếu lỗi
+    setSavedPostIds((prev) => {
+      const next = new Set(prev);
+      isSaved ? next.add(postId) : next.delete(postId);
+      return next;
+    });
+    toast.error("Có lỗi xảy ra");
+  }
+};
+useEffect(() => {
+  fetchSavedPosts();
+}, []);
   const fetchProfile = async () => {
     try {
       const res = await api.get("/users/me");
@@ -399,7 +434,84 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* --- PHẦN ĐÁNH GIÁ 3 TABS --- */}
+      <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden mt-6">
+  <div className="p-6 border-b border-gray-100">
+    <div className="flex items-center justify-between">
+      <h2 className="text-xl font-bold text-gray-900">Tin đăng đã lưu</h2>
+      <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-bold">
+        {savedPosts.length} tin
+      </span>
+    </div>
+  </div>
+
+  <div className="divide-y divide-gray-50">
+    {savedPosts.length === 0 ? (
+      <div className="py-12 text-center">
+        <ShoppingBag size={48} className="mx-auto text-gray-200 mb-4" />
+        <p className="text-gray-400 font-medium">Chưa có tin đăng nào được lưu</p>
+      </div>
+    ) : (
+     savedPosts.map((item) => {
+  const isSaved = savedPostIds.has(item.post._id);
+  return (
+    <div key={item._id} className="flex gap-4 p-4 hover:bg-gray-50 transition-all">
+      <Link href={`/post/${item.post._id}`} className="shrink-0">
+        <img
+          src={item.post.images?.[0] || "/placeholder.jpg"}
+          alt={item.post.title}
+          className="w-28 h-20 object-cover rounded-2xl"
+        />
+      </Link>
+
+      <div className="flex-1 min-w-0">
+        <Link href={`/post/${item.post._id}`}>
+          <h3 className="font-bold text-gray-800 text-sm line-clamp-2 mb-1 hover:text-orange-500 transition-colors">
+            {item.post.title}
+          </h3>
+        </Link>
+
+        <div className="flex items-center gap-2 mb-2">
+          <p className="text-orange-500 font-black text-base">
+            {Number(item.post.price).toLocaleString("vi-VN")}đ
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 text-gray-400 text-xs">
+          {item.post.createdAt && (
+            <>
+              <span>
+                {formatDistanceToNow(new Date(item.post.createdAt), {
+                  addSuffix: false,
+                  locale: vi,
+                })} trước
+              </span>
+            </>
+          )}
+          {item.post.location?.provinceName && (
+            <>
+              <span>•</span>
+              <span>{item.post.location.provinceName}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col items-end justify-between shrink-0">
+        <button
+          onClick={() => toggleSave(item.post._id)}
+          className={`transition-colors cursor-pointer ${isSaved ? "text-red-500" : "text-gray-300 hover:text-red-400"}`}
+        >
+          <Heart size={18} fill={isSaved ? "currentColor" : "none"} />
+        </button>
+        
+        
+      </div>
+    </div>
+  );
+})
+    )}
+  </div>
+</div>
       <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 overflow-hidden mt-6">
         <div className="flex border-b border-gray-50 bg-gray-50/30 p-2 overflow-x-auto scrollbar-hide">
           <button

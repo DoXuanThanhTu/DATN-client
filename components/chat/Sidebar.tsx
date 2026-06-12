@@ -6,6 +6,7 @@ import { useAuthStore } from "@/app/store/useAuthStore";
 import { MessageSquare, ArrowLeft, Search } from "lucide-react";
 import { Conversation, User } from "@/app/types/chat";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 export const Sidebar = () => {
   const router = useRouter();
@@ -78,14 +79,23 @@ export const Sidebar = () => {
             >
               <ArrowLeft size={18} className="text-gray-500" />
             </button> */}
-            <div>
-              <h1 className="text-lg font-bold text-gray-900 tracking-tight">
-                Tin nhắn
-              </h1>
-              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">
-                {myConversations.length} cuộc trò chuyện
-              </p>
-            </div>
+           <div>
+  <Link
+    href="/"
+    className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition-colors mb-1"
+  >
+    <ArrowLeft size={16} />
+    <span>Quay lại trang chủ</span>
+  </Link>
+
+  <h1 className="text-lg font-bold text-gray-900 tracking-tight">
+    Tin nhắn
+  </h1>
+
+  <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">
+    {myConversations.length} cuộc trò chuyện
+  </p>
+</div>
           </div>
           <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600">
             <MessageSquare size={18} />

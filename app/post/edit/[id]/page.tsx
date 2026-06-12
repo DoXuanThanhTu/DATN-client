@@ -319,7 +319,7 @@ export default function ProductEditForm() {
         trashIds.forEach((fileId) => deleteImageFromServer(fileId));
       }
 
-      setTimeout(() => router.push("/my-posts"), 1500);
+      setTimeout(() => router.push(`/post/${id}`), 1000);
     } catch (err) {
       const error = err as AxiosError<{ message: string }>;
       toast.error(error.response?.data?.message || "Cập nhật thất bại");

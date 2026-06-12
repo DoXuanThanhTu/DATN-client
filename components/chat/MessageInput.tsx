@@ -37,7 +37,7 @@ export const MessageInput = () => {
   };
 
   return (
-    <div className="p-3 bg-white flex items-center gap-2 border-t border-gray-100">
+    <div className="p-3 bg-white flex items-center gap-2 ">
       <div className="flex gap-2 text-blue-600 px-1">
         {/* <PlusCircle size={22} className="cursor-pointer hover:opacity-70" /> */}
         {/* <ImageIcon size={22} className="cursor-pointer hover:opacity-70" /> */}

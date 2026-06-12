@@ -157,9 +157,9 @@ export const ChatContainer = () => {
               className="w-11 h-11 rounded-full object-cover border border-gray-100"
               alt="Avatar"
             />
-            {isOnline && (
+            {/* {isOnline && (
               <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-white bg-green-500" />
-            )}
+            )} */}
           </div>
           <div>
             <h3 className="font-bold text-sm text-gray-900">

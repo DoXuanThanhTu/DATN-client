@@ -77,7 +77,7 @@ export default function PublicProfilePage() {
 
   const fetchPublicProfile = async () => {
     try {
-      const res = await api.get(`/users/user/${id}`); // Giả sử route backend của bạn
+      const res = await api.get(`/users/user/${id}`); 
       setData(res.data.data);
     } catch (error) {
       console.error("Lỗi tải hồ sơ công khai");

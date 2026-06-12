@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { toast } from "react-toastify";
 import {
   MapPin,
   Clock,
@@ -8,10 +9,11 @@ import {
   ChevronRight,
   MessageCircle,
   Phone,
-  ShieldCheck,
-  Flame,
-  BugPlay,
-  ShoppingCart,
+  Heart,
+  Star,
+  Send,
+  Info,
+  CheckCircle2,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -36,6 +38,10 @@ interface ProductData {
   seller: User & {
     lastActive?: string;
     phone?: string;
+    soldCount?: number;
+    responseRate?: number;
+    rating?: number;
+    reviewCount?: number;
   };
 }
 
@@ -64,23 +70,31 @@ export default function ProductDetail() {
   const { selectUser, getConversations } = useChatStore();
 
   const [data, setData] = useState<ProductData | null>(null);
-  const [related, setRelated] = useState<ProductData[]>([]); // Lưu sản phẩm liên quan
+  const [related, setRelated] = useState<ProductData[]>([]);
   const [recommendations, setRecommendations] = useState<ProductData[]>([]);
   const [activeImg, setActiveImg] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isNegotiateOpen, setIsNegotiateOpen] = useState(false);
-
-  // Hàm xử lý gửi trả giá ngầm
-  // File: ProductDetail.tsx
-
+  const [isSaved, setIsSaved] = useState(false);
+  const [dealPrice, setDealPrice] = useState("");
+  const [quickMessage, setQuickMessage] = useState("");
+  const handleSavePost = async () => {
+    try {
+      const response = await api.post(`/favorites/${identity}`);
+      const data = response.data;
+      if (data.success) {
+        setIsSaved(!isSaved);
+        toast.success(isSaved ? "Đã bỏ lưu tin" : "Đã lưu tin thành công");
+      }
+    } catch (error) {
+      console.error("Lỗi khi lưu tin:", error);
+      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
+    }
+  };
   const handleNegotiateSend = async (amount: number, userMessage: string) => {
     if (!currentUser || !data?.seller) return;
-
     try {
-      // 1. Chọn user (để tạo conversation nếu chưa có)
       await selectUser(data.seller);
-
-      // 2. Chuẩn bị dữ liệu trả giá chi tiết
       const offerDetails = {
         productId: data._id,
         productName: data.title,
@@ -88,71 +102,69 @@ export default function ProductDetail() {
         originalPrice: data.price,
         offeredPrice: amount,
       };
-
-      // 3. Gửi tin nhắn với type "offer" và kèm theo offerDetails
-      // Tham số: content, type, offerDetails
-      await useChatStore.getState().sendMessage(
-        userMessage ||
-          `Tôi muốn trả giá sản phẩm này ${amount.toLocaleString()}đ`, // Nội dung hiển thị
-        "offer", // MessageType
-        offerDetails, // Thông tin chi tiết để hiển thị khung trả giá
-      );
-
-      alert("Đã gửi đề nghị trả giá thành công!");
+      await useChatStore
+        .getState()
+        .sendMessage(
+          userMessage ||
+            `Tôi muốn trả giá sản phẩm này ${amount.toLocaleString()}đ`,
+          "offer",
+          offerDetails,
+        );
+      toast.success("Đã gửi đề nghị trả giá thành công!");
       setIsNegotiateOpen(false);
-
-      // Tùy chọn: Chuyển hướng sang trang chat để người dùng theo dõi
-      // router.push("/chat");
     } catch (error) {
       console.error("Lỗi khi gửi trả giá:", error);
-      alert("Có lỗi xảy ra, vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
     }
   };
-  useEffect(() => {
-    if (!identity) return;
 
-    const fetchProduct = async () => {
-      try {
-        setIsLoading(true);
-        const response = await api.get<{
-          data: ProductData;
-          related: ProductData[];
-        }>(`/posts/${identity}`);
+useEffect(() => {
+  if (!identity) return;
+  const fetchProduct = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get<{
+        data: ProductData;
+        related: ProductData[];
+      }>(`/posts/${identity}`);
+      setData(response.data.data);
+      setRelated(response.data.related || []);
+      setActiveImg(0);
+      await api.post("/users/interaction", { type: "view", post: identity });
+      const recommendations = await api.get(`/recommend/hybrid/${identity}`);
+      setRecommendations(recommendations.data.data);
+    } catch (error) {
+      console.error("Lỗi khi lấy sản phẩm:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        setData(response.data.data);
-        setRelated(response.data.related || []);
-        setActiveImg(0);
+  const fetchFavorite = async () => {
+    try {
+      const res = await api.get("/favorites");
+      const favorites: { post: { _id: string } }[] = res.data.data || [];
+      setIsSaved(favorites.some((fav) => fav.post._id === identity));
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách yêu thích:", error);
+    }
+  };
 
-        // CHỈ TRACK NẾU IDENTITY NÀY CHƯA ĐƯỢC TRACK TRONG LẦN MOUNT NÀY
-        // if (isTracked.current !== identity) {
-        await api.post("/users/interaction", {
-          type: "view",
-          post: identity,
-        });
-        const recommendations = await api.get(`/recommend/hybrid/${identity}`);
-        setRecommendations(recommendations.data.data);
-        // isTracked.current = identity || "";
-        // }
-      } catch (error) {
-        console.error("Lỗi khi lấy sản phẩm:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  fetchProduct();
+  if (currentUser) fetchFavorite();
 
-    fetchProduct();
-    window.scrollTo(0, 0);
-  }, [identity]);
+  window.scrollTo(0, 0);
+}, [identity, currentUser]);
 
   const handleChat = async () => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập để chat với người bán!");
+      toast.error("Vui lòng đăng nhập để chat với người bán!");
       return;
     }
     if (!data?.seller) return;
     const sellerId = data.seller._id || data.seller.id;
     if (sellerId === currentUser.id) {
-      alert("Đây là bài đăng của bạn!");
+      toast.error("Đây là bài đăng của bạn!");
       return;
     }
     try {
@@ -163,306 +175,527 @@ export default function ProductDetail() {
       console.error("Lỗi khi mở chat:", error);
     }
   };
-  const handleBuy = async () => {
+
+
+  const handleSendDeal = async () => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập để mua hàng!");
+      toast.error("Vui lòng đăng nhập!");
       return;
     }
+    const amount = parseInt(dealPrice.replace(/\D/g, ""));
+    if (!amount || amount <= 0) {
+      toast.error("Vui lòng nhập giá hợp lệ");
+      return;
+    }
+    await handleNegotiateSend(
+      amount,
+      `Tôi muốn trả giá sản phẩm này ${amount.toLocaleString()}đ`,
+    );
+    setDealPrice("");
+  };
 
+  const handleQuickMessage = async () => {
+    if (!quickMessage.trim()) return;
+    if (!currentUser) {
+      toast.error("Vui lòng đăng nhập!");
+      return;
+    }
+    if (!data?.seller) return;
     try {
-      router.push("/checkout?id=" + data?._id);
-    } catch (error) {
-      console.error("Lỗi khi mở chat:", error);
+      await selectUser(data.seller);
+      await useChatStore.getState().sendMessage(quickMessage, "text");
+      setQuickMessage("");
+      toast.success("Đã gửi tin nhắn thành công!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
     }
   };
+
   const isOwner = useMemo(() => {
     if (!data?.seller || !currentUser) return false;
     return data.seller._id === currentUser.id;
   }, [data?.seller, currentUser]);
+
   const sellerStatus = useMemo(() => {
-    if (!data?.seller?.lastActive) return "Ngoại tuyến";
+    if (!data?.seller?.lastActive)
+      return { text: "Ngoại tuyến", online: false };
     const diff = Date.now() - new Date(data.seller.lastActive).getTime();
-    if (diff < 5 * 60 * 1000)
-      return (
-        <span className="flex items-center gap-1 text-green-500 font-medium">
-          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-          Đang hoạt động
-        </span>
-      );
-    return `Hoạt động ${formatTime(data.seller.lastActive)}`;
+    if (diff < 5 * 60 * 1000) return { text: "Đang hoạt động", online: true };
+    return {
+      text: `Hoạt động ${formatTime(data.seller.lastActive)}`,
+      online: false,
+    };
   }, [data?.seller?.lastActive]);
 
   if (isLoading)
-    return <div className="p-10 text-center text-gray-500">Đang tải...</div>;
-  if (!data)
-    return (
-      <div className="p-10 text-center text-gray-500">
-        Không tìm thấy sản phẩm.
-      </div>
-    );
-
   return (
-    <div className="w-full  md:w-4xl lg:w-6xl mx-auto p-4 bg-gray-50 min-h-screen">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* CHI TIẾT SẢN PHẨM */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl overflow-hidden shadow-sm relative group">
-            <div className="aspect-4/3 bg-zinc-100 flex items-center justify-center">
-              <img
-                src={data.images?.[activeImg] || "/placeholder.png"}
-                className="w-full h-full object-contain"
-                alt={data.title}
-              />
-            </div>
-            {data.images?.length > 1 && (
-              <>
-                <button
-                  onClick={() =>
-                    setActiveImg((prev) => (prev > 0 ? prev - 1 : prev))
-                  }
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <ChevronLeft size={24} />
-                </button>
-                <button
-                  onClick={() =>
-                    setActiveImg((prev) =>
-                      prev < data.images.length - 1 ? prev + 1 : prev,
-                    )
-                  }
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <ChevronRight size={24} />
-                </button>
-              </>
-            )}
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-            {data.images?.map((img, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveImg(index)}
-                className={`w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 ${activeImg === index ? "border-orange-500 scale-95" : "border-transparent opacity-70"}`}
-              >
-                <img src={img} className="w-full h-full object-cover" alt="" />
-              </button>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-              {data.title}
-            </h1>
-            <div className="flex items-center justify-between">
-              <span className="text-3xl font-black text-red-600">
-                {data.price?.toLocaleString()} đ
-              </span>
-              <div className="flex items-center gap-1 text-[13px] text-green-700 bg-green-50 px-3 py-1.5 rounded-full font-bold">
-                <ShieldCheck size={16} />
-                {data.priceNegotiable ? "Có thể thương lượng" : "Giá cố định"}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-500 border-y py-4">
-              <div className="flex items-center gap-2">
-                <MapPin size={18} />{" "}
-                <span className="truncate">{data.location?.fullAddress}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock size={18} /> Đăng {formatTime(data.createdAt)}
-              </div>
-            </div>
+    <div className="bg-[#f4f4f4] min-h-screen">
+      <div className="max-w-5xl mx-auto px-4 py-4">
+        {/* MAIN CARD SKELETON */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* LEFT: Image skeleton */}
             <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-3 uppercase tracking-wide">
-                Mô tả sản phẩm
-              </h3>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-line text-[15px]">
-                {data.description}
-              </p>
+              <div className="bg-gray-200 rounded-lg aspect-square mb-3 animate-pulse" />
+              <div className="flex gap-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="w-16 h-16 rounded-md bg-gray-200 animate-pulse shrink-0" />
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT: Info skeleton */}
+            <div className="flex flex-col gap-4">
+              {/* Title */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 space-y-2">
+                  <div className="h-5 bg-gray-200 rounded animate-pulse w-full" />
+                  <div className="h-5 bg-gray-200 rounded animate-pulse w-3/4" />
+                </div>
+                <div className="h-8 w-16 bg-gray-200 rounded-full animate-pulse shrink-0" />
+              </div>
+
+              <div className="h-9 bg-gray-200 rounded animate-pulse w-40" />
+
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-56" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
+              </div>
+
+              {/* CTA buttons */}
+              <div className="flex gap-3">
+                <div className="flex-1 h-12 bg-gray-200 rounded-lg animate-pulse" />
+                <div className="flex-1 h-12 bg-gray-200 rounded-lg animate-pulse" />
+              </div>
+
+              {/* Seller card */}
+              <div className="border border-gray-100 rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-32" />
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-24" />
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-12" />
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-16" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick message */}
+              <div className="h-11 bg-gray-200 rounded-lg animate-pulse" />
+
+              {/* Deal giá */}
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+                <div className="flex gap-2">
+                  <div className="flex-1 h-11 bg-gray-200 rounded-lg animate-pulse" />
+                  <div className="w-20 h-11 bg-gray-200 rounded-lg animate-pulse" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* NGƯỜI BÁN */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100  top-4">
-            <Link
-              href={`/user/${data.seller._id}`}
-              className="flex items-center gap-3 mb-6"
-            >
-              {data.seller?.avatar ? (
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                  <img
-                    src={data.seller.avatar}
-                    alt={data.seller.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
+        {/* DESCRIPTION SKELETON */}
+        <div className="bg-white rounded-lg shadow-sm p-5 mb-4 space-y-3">
+          <div className="h-5 bg-gray-200 rounded animate-pulse w-36" />
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className={`h-4 bg-gray-200 rounded animate-pulse ${i === 4 ? "w-2/3" : "w-full"}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* RELATED PRODUCTS SKELETON */}
+        <div className="mb-4">
+          <div className="h-5 bg-gray-200 rounded animate-pulse w-48 mb-3" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100">
+                <div className="aspect-square bg-gray-200 animate-pulse" />
+                <div className="p-2.5 space-y-2">
+                  <div className="h-3 bg-gray-200 rounded animate-pulse w-full" />
+                  <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5" />
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-24" />
+                  <div className="h-3 bg-gray-200 rounded animate-pulse w-20" />
                 </div>
-              ) : (
-                <div className="w-16 h-16 bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-slate-200">
-                  {data.seller?.name?.charAt(0) || "U"}
-                </div>
-              )}
-              <div>
-                <p className="font-bold text-gray-900 text-lg">
-                  {data.seller?.name}
-                </p>
-                <div className="text-xs mt-1 font-medium">{sellerStatus}</div>
               </div>
-            </Link>
-            <div className="flex flex-col gap-3">
-              {/* <a
-                href={`tel:${data.seller?.phone}`}
-                className="flex items-center justify-center gap-2 bg-green-600 text-white py-3.5 rounded-xl font-bold hover:bg-green-700 transition-all shadow-sm active:scale-95"
-              >
-                <Phone size={20} /> {data.seller?.phone || "Gọi điện"}
-              </a> */}
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+  if (!data)
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-gray-500">Không tìm thấy sản phẩm.</div>
+      </div>
+    );
+
+  return (
+    <div className="bg-[#f4f4f4] min-h-screen">
+      <div className="max-w-5xl mx-auto px-4 py-4">
+        {/* MAIN CARD */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* LEFT: Images */}
+            <div>
+              {/* Main image */}
+              <div className="relative bg-gray-100 rounded-lg overflow-hidden aspect-square mb-3 group">
+                <img
+                  src={data.images?.[activeImg] || "/placeholder.png"}
+                  className="w-full h-full object-contain"
+                  alt={data.title}
+                />
+                {/* Image counter */}
+                <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                  {activeImg + 1}/{data.images?.length || 1}
+                </div>
+                {data.images?.length > 1 && (
+                  <>
+                    <button
+                      onClick={() =>
+                        setActiveImg((prev) => (prev > 0 ? prev - 1 : prev))
+                      }
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setActiveImg((prev) =>
+                          prev < data.images.length - 1 ? prev + 1 : prev,
+                        )
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Thumbnails */}
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {data.images?.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setActiveImg(index)}
+                    className={`w-16 h-16 rounded-md overflow-hidden border-2 shrink-0 transition-all ${
+                      activeImg === index
+                        ? "border-[#f5a623] opacity-100"
+                        : "border-gray-200 opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      className="w-full h-full object-cover"
+                      alt=""
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT: Info + Seller */}
+            <div className="flex flex-col gap-4">
+              {/* Title + Save */}
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="text-xl font-bold text-gray-900 leading-snug flex-1">
+                  {data.title}
+                </h1>
+                {isOwner ? null : (
+                  <button
+                    onClick={() => handleSavePost()}
+                    className={`cursor-pointer flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border transition-all shrink-0 ${
+                      isSaved
+                        ? "bg-red-50 border-red-200 text-red-500"
+                        : "border-gray-300 text-gray-600 hover:border-gray-400"
+                    }`}
+                  >
+                    <Heart size={15} fill={isSaved ? "currentColor" : "none"} />
+                    {isSaved ? "Đã lưu" : "Lưu"}
+                  </button>
+                )}
+              </div>
+              {/* Price */}
+              <div className="flex items-center gap-3">
+                <span className="text-3xl font-black text-[#e53935]">
+                  {data.price?.toLocaleString()} đ
+                </span>
+              </div>
+
+              {/* Location & Time */}
+              <div className="flex flex-col gap-1.5 text-sm text-gray-500">
+                <div className="flex items-center gap-1.5">
+                  <MapPin size={15} className="shrink-0 text-gray-400" />
+                  <span className="truncate">{data.location?.fullAddress}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock size={15} className="shrink-0 text-gray-400" />
+                  <span>Cập nhật {formatTime(data.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* CTA buttons — only for non-owner */}
               {isOwner ? (
-                // HIỂN THỊ KHI LÀ CHỦ BÀI ĐĂNG
-                <div className="space-y-3">
-                  <div className="bg-orange-50 border border-orange-100 text-orange-700 p-3 rounded-xl text-center font-medium text-sm">
+                <div className="space-y-2">
+                  <div className="bg-orange-50 border border-orange-100 text-orange-700 p-3 rounded-lg text-center font-medium text-sm">
                     Đây là bài đăng của bạn
                   </div>
                   <button
                     onClick={() => router.push(`/post/edit/${data._id}`)}
-                    className="w-full flex items-center justify-center gap-2 bg-zinc-900 text-white py-3.5 rounded-xl font-bold hover:bg-black transition-all active:scale-95"
+                    className="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-black transition-all"
                   >
                     Chỉnh sửa tin đăng
                   </button>
                 </div>
               ) : (
-                // HIỂN THỊ KHI LÀ NGƯỜI MUA
-                <>
-                  {/* <a
-                    href={`tel:${data.seller?.phone}`}
-                    className="flex items-center justify-center gap-2 bg-green-600 text-white py-3.5 rounded-xl font-bold hover:bg-green-700 transition-all shadow-sm active:scale-95"
+                <div className="flex gap-3">
+                  
+                    {data.seller?.phone && <div
+                    className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-800 py-3 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all"
                   >
-                    <Phone size={20} /> {data.seller?.phone || "Gọi điện"}
-                  </a> */}
+                    <Phone size={16} />
+                    {data.seller?.phone || "Chưa có SĐT"}
+                  </div>}
                   <button
                     onClick={handleChat}
-                    className="flex items-center justify-center gap-2 border-2 border-orange-500 text-orange-500 py-3.5 rounded-xl font-bold hover:bg-orange-50 transition-all active:scale-95"
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#f5a623] text-white py-3 rounded-lg font-bold text-sm hover:bg-[#e09610] transition-all cursor-pointer"
                   >
-                    <MessageCircle size={20} /> Chat ngay
+                    <MessageCircle size={16} />
+                    Chat
                   </button>
-                  <button
-                    onClick={handleBuy}
-                    className="flex items-center justify-center gap-2 border-2 border-green-500 text-green-500 py-3.5 rounded-xl font-bold hover:bg-orange-50 transition-all active:scale-95"
-                  >
-                    <ShoppingCart size={20} /> Mua ngay
-                  </button>
-                  {data.priceNegotiable && (
-                    <button
-                      onClick={() =>
-                        currentUser
-                          ? setIsNegotiateOpen(true)
-                          : alert("Vui lòng đăng nhập")
-                      }
-                      className="flex items-center justify-center gap-2 bg-white border-2 border-yellow-400 text-black py-3.5 rounded-xl font-bold hover:bg-yellow-50 transition-all active:scale-95"
+                </div>
+              )}
+
+              {/* Seller info */}
+              {!isOwner && (
+                <div className="border border-gray-200 rounded-lg p-3">
+                  <Link href={`/user/${data.seller._id}`} className="flex items-center justify-between">
+                    <div
+                      className="flex items-center gap-3 flex-1 min-w-0"
                     >
-                      <Flame size={20} className="text-orange-600" /> Trả giá
-                      ngay
+                      {data.seller?.avatar ? (
+                        <img
+                          src={data.seller.avatar}
+                          alt={data.seller.name}
+                          className="w-10 h-10 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0">
+                          {data.seller?.name?.charAt(0) || "U"}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-bold text-gray-900 text-sm">
+                          {data.seller?.name}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs mt-0.5">
+                          {sellerStatus.online ? (
+                            <>
+                              <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block"></span>
+                              <span className="text-green-600 font-medium">
+                                {sellerStatus.text}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-gray-400">
+                              {sellerStatus.text}
+                            </span>
+                          )}
+                          {data.seller.responseRate != null && (
+                            <span className="text-gray-400 ml-1">
+                              · Phản hồi: {data.seller.responseRate}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-center shrink-0 ml-3">
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold text-gray-800 text-sm">
+                          {data.seller.soldCount ?? 5}
+                        </span>
+                        <Star
+                          size={13}
+                          className="text-yellow-400 fill-yellow-400"
+                        />
+                      </div>
+                      <div className="text-[10px] text-gray-400">
+                        {data.seller.reviewCount ?? 0} đánh giá
+                      </div>
+                     
+                     
+                    </div>
+                  </Link>
+                </div>
+              )}
+
+              {/* Quick message */}
+              {!isOwner && (
+                <div className="flex gap-2 items-center border border-gray-200 rounded-lg px-3 py-2">
+                  <input
+                    type="text"
+                    value={quickMessage}
+                    onChange={(e) => setQuickMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleQuickMessage()}
+                    placeholder="Nhắn hỏi mua hàng..."
+                    className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder-gray-400"
+                  />
+                  <button
+                    onClick={handleQuickMessage}
+                    className="w-8 h-8 bg-[#f5a623] rounded-full flex items-center justify-center shrink-0 hover:bg-[#e09610] transition-colors"
+                  >
+                    <Send size={14} className="text-white ml-0.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Deal giá */}
+              {!isOwner && data.priceNegotiable && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                    Deal giá
+                  </p>
+                  <div className="flex gap-2 items-stretch">
+                    <div className="flex-1 relative border border-gray-200 rounded-lg overflow-hidden">
+                     <input
+                        type="text"
+                        value={dealPrice}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, "");
+
+                          if (!raw) {
+                            setDealPrice("");
+                            return;
+                          }
+
+                          const value = Number(raw);
+
+                          if (value > data.price) {
+                            setDealPrice(
+                              Number(data.price).toLocaleString("vi-VN")
+                            );
+                            return;
+                          }
+
+                          setDealPrice(
+                            value.toLocaleString("vi-VN")
+                          );
+                        }}
+                        placeholder="Nhập giá bạn mong muốn"
+                        className="w-full px-3 py-3 text-sm outline-none pr-8 text-gray-700 placeholder-gray-400"
+                      />  
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                        đ
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleSendDeal}
+                      className="px-4 bg-[#f5a623] text-white font-bold text-sm rounded-lg hover:bg-[#e09610] transition-colors"
+                    >
+                      Trả giá
                     </button>
-                  )}
-                </>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Giá gốc: {data.price?.toLocaleString()} đ
+                  </p>
+                </div>
               )}
             </div>
-            {isNegotiateOpen && data && (
-              <NegotiateModal
-                product={{
-                  title: data.title,
-                  price: data.price,
-                  image: data.images?.[0] || "/placeholder.png",
-                }}
-                onClose={() => setIsNegotiateOpen(false)}
-                onSend={handleNegotiateSend}
-              />
-            )}
+          </div>
+        </div>
+
+        {/* DESCRIPTION + COMMENTS */}
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-5 mb-4">
+            <h3 className="text-base font-bold text-gray-900 mb-3">
+              Mô tả chi tiết
+            </h3>
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+              {data.description}
+            </p>
+          </div>
+          
+
+        {/* RELATED PRODUCTS */}
+        {related.length > 0 && (
+          <div className="mb-4">
+            <h2 className="text-base font-bold text-gray-800 mb-3">
+              Bài đăng cùng danh mục
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              {related.map((item) => (
+                <ProductCard key={item._id} item={item} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* RECOMMENDATIONS */}
+        {recommendations.length > 0 && (
+          <div className="mb-4">
+            <h2 className="text-base font-bold text-gray-800 mb-3">
+              Có thể bạn quan tâm
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              {recommendations.slice(0, 10).map((item) => (
+                <ProductCard key={item._id} item={item} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Negotiate modal */}
+      {isNegotiateOpen && data && (
+        <NegotiateModal
+          product={{
+            title: data.title,
+            price: data.price,
+            image: data.images?.[0] || "/placeholder.png",
+          }}
+          onClose={() => setIsNegotiateOpen(false)}
+          onSend={handleNegotiateSend}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProductCard({ item }: { item: any }) {
+  return (
+    <Link href={`/post/${item._id}`} className="group">
+      <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100 h-full flex flex-col">
+        <div className="aspect-square bg-gray-100 relative overflow-hidden">
+          <img
+            src={item.images?.[0] || "/placeholder.png"}
+            alt={item.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+        <div className="p-2.5 flex flex-col flex-1 gap-1">
+          <h4 className="text-xs font-semibold text-gray-800 line-clamp-2 leading-snug min-h-[2.5rem]">
+            {item.title}
+          </h4>
+          <p className="text-sm font-bold text-[#e53935]">
+            {item.price.toLocaleString()} đ
+          </p>
+          <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-auto">
+            <MapPin size={10} />
+            <span className="truncate">
+              {item.location?.provinceName || "Toàn quốc"}
+            </span>
           </div>
         </div>
       </div>
-
-      {/* SẢN PHẨM LIÊN QUAN (MỚI THÊM) */}
-      <div className="mt-12 min-h-40">
-        <h2 className="text-xl font-bold flex items-center gap-2 mb-2 text-gray-800">
-          Bài đăng cùng danh mục
-        </h2>
-        {related.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:w-185   gap-4">
-            {related.map((item) => (
-              <Link key={item._id} href={`/post/${item._id}`} className="group">
-                <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 h-full flex flex-col">
-                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                    <img
-                      src={item.images?.[0] || "/placeholder.png"}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="p-3 flex flex-col flex-1 justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-800 line-clamp-2 min-h-[2.5rem]">
-                        {item.title}
-                      </h4>
-                      <p className="text-red-600 font-bold text-sm mt-1">
-                        {item.price.toLocaleString()} đ
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-2">
-                      <MapPin size={12} />
-                      <span className="truncate">
-                        {item.location?.provinceName || "Toàn quốc"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className=" text-gray-500">Không có tin đăng liên quan</div>
-        )}
-      </div>
-      <div className="mt-12 min-h-40">
-        <h2 className="text-xl font-bold flex items-center gap-2 mb-2 text-gray-800">
-          Có thể bạn quan tâm
-        </h2>
-        {recommendations.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:w-185   gap-4">
-            {recommendations.slice(0, 8).map((item) => (
-              <Link key={item._id} href={`/post/${item._id}`} className="group">
-                <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-gray-100 h-full flex flex-col">
-                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                    <img
-                      src={item.images?.[0] || "/placeholder.png"}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="p-3 flex flex-col flex-1 justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-800 line-clamp-2 min-h-[2.5rem]">
-                        {item.title}
-                      </h4>
-                      <p className="text-red-600 font-bold text-sm mt-1">
-                        {item.price.toLocaleString()} đ
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-2">
-                      <MapPin size={12} />
-                      <span className="truncate">
-                        {item.location?.provinceName || "Toàn quốc"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className=" text-gray-500">Không có tin đăng liên quan</div>
-        )}
-      </div>
-    </div>
+    </Link>
   );
 }
