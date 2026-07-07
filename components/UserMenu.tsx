@@ -84,9 +84,9 @@ export default function UserMenu() {
               {/* <MenuItem icon={<Heart size={18} />} label="Tin đăng đã lưu" />
               <MenuItem icon={<History size={18} />} label="Lịch sử xem tin" />
               <MenuItem icon={<Star size={18} />} label="Đánh giá từ tôi" /> */}
-              <Link href="/wallet">
+              {/* <Link href="/wallet">
                 <MenuItem icon={<Wallet size={18} />} label="Ví của tôi" />
-              </Link>
+              </Link> */}
               <Link href="/my-posts">
                 <MenuItem icon={<FileText size={18} />} label="Tin của tôi" />
               </Link>

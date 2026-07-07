@@ -14,6 +14,8 @@ import {
   Send,
   Info,
   CheckCircle2,
+  ShoppingCart,
+  PackageX,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -43,6 +45,7 @@ interface ProductData {
     rating?: number;
     reviewCount?: number;
   };
+  status?: string;
 }
 
 const formatTime = (dateString: string) => {
@@ -118,43 +121,43 @@ export default function ProductDetail() {
     }
   };
 
-useEffect(() => {
-  if (!identity) return;
-  const fetchProduct = async () => {
-    try {
-      setIsLoading(true);
-      const response = await api.get<{
-        data: ProductData;
-        related: ProductData[];
-      }>(`/posts/${identity}`);
-      setData(response.data.data);
-      setRelated(response.data.related || []);
-      setActiveImg(0);
-      await api.post("/users/interaction", { type: "view", post: identity });
-      const recommendations = await api.get(`/recommend/hybrid/${identity}`);
-      setRecommendations(recommendations.data.data);
-    } catch (error) {
-      console.error("Lỗi khi lấy sản phẩm:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (!identity) return;
+    const fetchProduct = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get<{
+          data: ProductData;
+          related: ProductData[];
+        }>(`/posts/${identity}`);
+        setData(response.data.data);
+        setRelated(response.data.related || []);
+        setActiveImg(0);
+        await api.post("/users/interaction", { type: "view", post: identity });
+        const recommendations = await api.get(`/recommend/hybrid/${identity}`);
+        setRecommendations(recommendations.data.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy sản phẩm:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const fetchFavorite = async () => {
-    try {
-      const res = await api.get("/favorites");
-      const favorites: { post: { _id: string } }[] = res.data.data || [];
-      setIsSaved(favorites.some((fav) => fav.post._id === identity));
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách yêu thích:", error);
-    }
-  };
+    const fetchFavorite = async () => {
+      try {
+        const res = await api.get("/favorites");
+        const favorites: { post: { _id: string } }[] = res.data.data || [];
+        setIsSaved(favorites.some((fav) => fav.post._id === identity));
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách yêu thích:", error);
+      }
+    };
 
-  fetchProduct();
-  if (currentUser) fetchFavorite();
+    fetchProduct();
+    if (currentUser) fetchFavorite();
 
-  window.scrollTo(0, 0);
-}, [identity, currentUser]);
+    window.scrollTo(0, 0);
+  }, [identity, currentUser]);
 
   const handleChat = async () => {
     if (!currentUser) {
@@ -175,7 +178,19 @@ useEffect(() => {
       console.error("Lỗi khi mở chat:", error);
     }
   };
-
+  const handleBuy = async () => {
+    if (!currentUser) {
+      toast.error("Vui lòng đăng nhập để mua hàng!");
+      return;
+    }
+    if (!data?.seller) return;
+    const sellerId = data.seller._id || data.seller.id;
+    if (sellerId === currentUser.id) {
+      toast.error("Đây là bài đăng của bạn!");
+      return;
+    }
+    router.push("/checkout?id=" + data?._id);
+  };
 
   const handleSendDeal = async () => {
     if (!currentUser) {
@@ -229,113 +244,138 @@ useEffect(() => {
   }, [data?.seller?.lastActive]);
 
   if (isLoading)
-  return (
-    <div className="bg-[#f4f4f4] min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 py-4">
-        {/* MAIN CARD SKELETON */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* LEFT: Image skeleton */}
-            <div>
-              <div className="bg-gray-200 rounded-lg aspect-square mb-3 animate-pulse" />
-              <div className="flex gap-2">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="w-16 h-16 rounded-md bg-gray-200 animate-pulse shrink-0" />
-                ))}
-              </div>
-            </div>
-
-            {/* RIGHT: Info skeleton */}
-            <div className="flex flex-col gap-4">
-              {/* Title */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 space-y-2">
-                  <div className="h-5 bg-gray-200 rounded animate-pulse w-full" />
-                  <div className="h-5 bg-gray-200 rounded animate-pulse w-3/4" />
-                </div>
-                <div className="h-8 w-16 bg-gray-200 rounded-full animate-pulse shrink-0" />
-              </div>
-
-              <div className="h-9 bg-gray-200 rounded animate-pulse w-40" />
-
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-56" />
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
-              </div>
-
-              {/* CTA buttons */}
-              <div className="flex gap-3">
-                <div className="flex-1 h-12 bg-gray-200 rounded-lg animate-pulse" />
-                <div className="flex-1 h-12 bg-gray-200 rounded-lg animate-pulse" />
-              </div>
-
-              {/* Seller card */}
-              <div className="border border-gray-100 rounded-lg p-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-32" />
-                    <div className="h-3 bg-gray-200 rounded animate-pulse w-24" />
-                  </div>
-                  <div className="space-y-1 text-right">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-12" />
-                    <div className="h-3 bg-gray-200 rounded animate-pulse w-16" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick message */}
-              <div className="h-11 bg-gray-200 rounded-lg animate-pulse" />
-
-              {/* Deal giá */}
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+    return (
+      <div className="bg-[#f4f4f4] min-h-screen">
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          {/* MAIN CARD SKELETON */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* LEFT: Image skeleton */}
+              <div>
+                <div className="bg-gray-200 rounded-lg aspect-square mb-3 animate-pulse" />
                 <div className="flex gap-2">
-                  <div className="flex-1 h-11 bg-gray-200 rounded-lg animate-pulse" />
-                  <div className="w-20 h-11 bg-gray-200 rounded-lg animate-pulse" />
+                  {[...Array(4)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-16 h-16 rounded-md bg-gray-200 animate-pulse shrink-0"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* RIGHT: Info skeleton */}
+              <div className="flex flex-col gap-4">
+                {/* Title */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 bg-gray-200 rounded animate-pulse w-full" />
+                    <div className="h-5 bg-gray-200 rounded animate-pulse w-3/4" />
+                  </div>
+                  <div className="h-8 w-16 bg-gray-200 rounded-full animate-pulse shrink-0" />
+                </div>
+
+                <div className="h-9 bg-gray-200 rounded animate-pulse w-40" />
+
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-56" />
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
+                </div>
+
+                {/* CTA buttons */}
+                <div className="flex gap-3">
+                  <div className="flex-1 h-12 bg-gray-200 rounded-lg animate-pulse" />
+                  <div className="flex-1 h-12 bg-gray-200 rounded-lg animate-pulse" />
+                </div>
+
+                {/* Seller card */}
+                <div className="border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-32" />
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-24" />
+                    </div>
+                    <div className="space-y-1 text-right">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-12" />
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-16" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick message */}
+                <div className="h-11 bg-gray-200 rounded-lg animate-pulse" />
+
+                {/* Deal giá */}
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+                  <div className="flex gap-2">
+                    <div className="flex-1 h-11 bg-gray-200 rounded-lg animate-pulse" />
+                    <div className="w-20 h-11 bg-gray-200 rounded-lg animate-pulse" />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* DESCRIPTION SKELETON */}
-        <div className="bg-white rounded-lg shadow-sm p-5 mb-4 space-y-3">
-          <div className="h-5 bg-gray-200 rounded animate-pulse w-36" />
-          <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className={`h-4 bg-gray-200 rounded animate-pulse ${i === 4 ? "w-2/3" : "w-full"}`}
-              />
-            ))}
+          {/* DESCRIPTION SKELETON */}
+          <div className="bg-white rounded-lg shadow-sm p-5 mb-4 space-y-3">
+            <div className="h-5 bg-gray-200 rounded animate-pulse w-36" />
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-4 bg-gray-200 rounded animate-pulse ${i === 4 ? "w-2/3" : "w-full"}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* RELATED PRODUCTS SKELETON */}
-        <div className="mb-4">
-          <div className="h-5 bg-gray-200 rounded animate-pulse w-48 mb-3" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100">
-                <div className="aspect-square bg-gray-200 animate-pulse" />
-                <div className="p-2.5 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded animate-pulse w-full" />
-                  <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-24" />
-                  <div className="h-3 bg-gray-200 rounded animate-pulse w-20" />
+          {/* RELATED PRODUCTS SKELETON */}
+          <div className="mb-4">
+            <div className="h-5 bg-gray-200 rounded animate-pulse w-48 mb-3" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100"
+                >
+                  <div className="aspect-square bg-gray-200 animate-pulse" />
+                  <div className="p-2.5 space-y-2">
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-full" />
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5" />
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-24" />
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-20" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-  if (!data)
+    );
+  const isOwnerPreview =
+    !data?.seller || !currentUser ? false : data.seller._id === currentUser.id;
+
+  if (!data || (data.status !== "active" && !isOwnerPreview))
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-gray-500">Không tìm thấy sản phẩm.</div>
+      <div className="flex items-center justify-center min-h-screen bg-[#f4f4f4] px-4">
+        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <PackageX size={32} className="text-red-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">
+            Không tìm thấy tin đăng
+          </h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Tin đăng này không tồn tại hoặc đã bị ẩn.
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 bg-[#f5a623] text-white py-2.5 px-6 rounded-lg font-bold text-sm hover:bg-[#e09610] transition-all"
+          >
+            Về trang chủ
+          </Link>
+        </div>
       </div>
     );
 
@@ -458,20 +498,28 @@ useEffect(() => {
                   </button>
                 </div>
               ) : (
-                <div className="flex gap-3">
-                  
-                    {data.seller?.phone && <div
-                    className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-800 py-3 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all"
-                  >
-                    <Phone size={16} />
-                    {data.seller?.phone || "Chưa có SĐT"}
-                  </div>}
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-3">
+                    {data.seller?.phone && (
+                      <div className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-800 py-3 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all">
+                        <Phone size={16} />
+                        {data.seller?.phone || "Chưa có SĐT"}
+                      </div>
+                    )}
+                    <button
+                      onClick={handleChat}
+                      className="flex-1 flex items-center justify-center gap-2 bg-[#f5a623] text-white py-3 rounded-lg font-bold text-sm hover:bg-[#e09610] transition-all cursor-pointer"
+                    >
+                      <MessageCircle size={16} />
+                      Chat
+                    </button>
+                  </div>
                   <button
-                    onClick={handleChat}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[#f5a623] text-white py-3 rounded-lg font-bold text-sm hover:bg-[#e09610] transition-all cursor-pointer"
+                    onClick={handleBuy}
+                    className="w-full flex items-center justify-center gap-2 bg-[#e53935] text-white py-3 rounded-lg font-bold text-sm hover:bg-[#d32f2f] transition-all cursor-pointer"
                   >
-                    <MessageCircle size={16} />
-                    Chat
+                    <ShoppingCart size={16} />
+                    Mua ngay
                   </button>
                 </div>
               )}
@@ -479,10 +527,11 @@ useEffect(() => {
               {/* Seller info */}
               {!isOwner && (
                 <div className="border border-gray-200 rounded-lg p-3">
-                  <Link href={`/user/${data.seller._id}`} className="flex items-center justify-between">
-                    <div
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
+                  <Link
+                    href={`/user/${data.seller._id}`}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       {data.seller?.avatar ? (
                         <img
                           src={data.seller.avatar}
@@ -532,8 +581,6 @@ useEffect(() => {
                       <div className="text-[10px] text-gray-400">
                         {data.seller.reviewCount ?? 0} đánh giá
                       </div>
-                     
-                     
                     </div>
                   </Link>
                 </div>
@@ -567,7 +614,7 @@ useEffect(() => {
                   </p>
                   <div className="flex gap-2 items-stretch">
                     <div className="flex-1 relative border border-gray-200 rounded-lg overflow-hidden">
-                     <input
+                      <input
                         type="text"
                         value={dealPrice}
                         onChange={(e) => {
@@ -582,18 +629,16 @@ useEffect(() => {
 
                           if (value > data.price) {
                             setDealPrice(
-                              Number(data.price).toLocaleString("vi-VN")
+                              Number(data.price).toLocaleString("vi-VN"),
                             );
                             return;
                           }
 
-                          setDealPrice(
-                            value.toLocaleString("vi-VN")
-                          );
+                          setDealPrice(value.toLocaleString("vi-VN"));
                         }}
                         placeholder="Nhập giá bạn mong muốn"
                         className="w-full px-3 py-3 text-sm outline-none pr-8 text-gray-700 placeholder-gray-400"
-                      />  
+                      />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                         đ
                       </span>
@@ -615,15 +660,14 @@ useEffect(() => {
         </div>
 
         {/* DESCRIPTION + COMMENTS */}
-          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-5 mb-4">
-            <h3 className="text-base font-bold text-gray-900 mb-3">
-              Mô tả chi tiết
-            </h3>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-              {data.description}
-            </p>
-          </div>
-          
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-5 mb-4">
+          <h3 className="text-base font-bold text-gray-900 mb-3">
+            Mô tả chi tiết
+          </h3>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+            {data.description}
+          </p>
+        </div>
 
         {/* RELATED PRODUCTS */}
         {related.length > 0 && (
