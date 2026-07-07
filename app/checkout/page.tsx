@@ -99,11 +99,32 @@ function CheckoutContent() {
     fetchData();
   }, [productId, type, negotiatedPrice, user]);
 
+  const PHONE_REGEX = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+
   const handleCheckout = async () => {
     if (!product || isSubmitting) return;
 
-    if (!receiverName || !receiverPhone || !address.province) {
-      alert("Vui lòng nhập đầy đủ thông tin nhận hàng!");
+    // 1. Kiểm tra họ tên
+    if (!receiverName.trim()) {
+      alert("Vui lòng nhập họ tên người nhận!");
+      return;
+    }
+
+    // 2. Kiểm tra số điện thoại - bắt buộc nhập
+    if (!receiverPhone.trim()) {
+      alert("Vui lòng nhập số điện thoại!");
+      return;
+    }
+
+    // 3. Kiểm tra định dạng số điện thoại
+    if (!PHONE_REGEX.test(receiverPhone.trim())) {
+      alert("Số điện thoại không hợp lệ");
+      return;
+    }
+
+    // 4. Kiểm tra địa chỉ giao hàng
+    if (!address.province) {
+      alert("Vui lòng chọn địa chỉ giao hàng!");
       return;
     }
 
@@ -122,15 +143,12 @@ function CheckoutContent() {
         },
       };
 
-      // Gửi yêu cầu tạo đơn hàng lên Backend
       const res = await api.post("/orders", orderData);
 
       if (res.data.success) {
-        // Nếu là VNPay, Backend sẽ trả về paymentUrl
         if (paymentMethod === "vnpay" && res.data.paymentUrl) {
           window.location.href = res.data.paymentUrl;
         } else {
-          // Nếu là COD, chuyển hướng về trang quản lý đơn hàng
           router.push("/my-orders?tab=buying");
         }
       }
@@ -142,7 +160,6 @@ function CheckoutContent() {
       setIsSubmitting(false);
     }
   };
-
   if (loading)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-3">
