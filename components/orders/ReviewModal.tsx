@@ -61,7 +61,7 @@ export default function ReviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-start p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-10 bg-black/50 backdrop-blur-sm">
       <div className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-bold text-gray-900">Đánh giá dịch vụ</h2>
