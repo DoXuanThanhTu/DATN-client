@@ -101,6 +101,10 @@ export default function ProductDetail() {
   const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const handleSavePost = async () => {
+    if (!currentUser) {
+      toast.error("Bạn chưa đăng nhập");
+      return;
+    }
     try {
       const response = await api.post(`/favorites/${identity}`);
       const data = response.data;
