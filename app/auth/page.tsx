@@ -94,12 +94,6 @@ const AuthForm = () => {
             >
               {isLogin ? <LogIn size={28} /> : <UserPlus size={28} />}
             </div>
-            <button
-              onClick={() => router.push(decodeURIComponent(callbackUrl))}
-              className="p-2 hover:bg-white/50 rounded-full transition-colors text-gray-400"
-            >
-              <ChevronLeft size={24} />
-            </button>
           </div>
 
           <h2 className="text-3xl font-900 text-gray-800 tracking-tight">
