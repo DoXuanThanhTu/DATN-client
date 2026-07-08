@@ -77,7 +77,7 @@ export default function PublicProfilePage() {
 
   const fetchPublicProfile = async () => {
     try {
-      const res = await api.get(`/users/user/${id}`); 
+      const res = await api.get(`/users/user/${id}`);
       setData(res.data.data);
     } catch (error) {
       console.error("Lỗi tải hồ sơ công khai");
@@ -156,7 +156,7 @@ export default function PublicProfilePage() {
           </div>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-3 gap-4 mt-12 pt-10 border-t border-slate-50">
+          <div className="grid grid-cols-2 gap-4 mt-12 pt-10 border-t border-slate-50">
             <div className="text-center group cursor-default">
               <div className="text-2xl font-black text-slate-900 group-hover:text-blue-600 transition-colors">
                 {stats.totalProducts}
@@ -174,14 +174,14 @@ export default function PublicProfilePage() {
                 Đánh giá
               </div>
             </div>
-            <div className="text-center group">
+            {/* <div className="text-center group">
               <div className="text-2xl font-black text-slate-900 group-hover:text-emerald-600 transition-colors">
                 100%
               </div>
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
                 Phản hồi
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
