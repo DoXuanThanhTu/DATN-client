@@ -47,7 +47,23 @@ interface ProductData {
   };
   status?: string;
 }
+interface ReviewItem {
+  _id: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  reviewer: {
+    _id: string;
+    name: string;
+    avatar?: string;
+  };
+}
 
+interface ReviewStats {
+  avgRating: number;
+  totalCount: number;
+  ratingBreakdown: Record<string, number>; // { "1": 0, "2": 1, ... "5": 10 }
+}
 const formatTime = (dateString: string) => {
   if (!dateString) return "-";
   const date = new Date(dateString);
@@ -81,6 +97,9 @@ export default function ProductDetail() {
   const [isSaved, setIsSaved] = useState(false);
   const [dealPrice, setDealPrice] = useState("");
   const [quickMessage, setQuickMessage] = useState("");
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const handleSavePost = async () => {
     try {
       const response = await api.post(`/favorites/${identity}`);
@@ -120,7 +139,26 @@ export default function ProductDetail() {
       toast.error("Có lỗi xảy ra, vui lòng thử lại.");
     }
   };
+  useEffect(() => {
+    if (!data?.seller?._id) return;
 
+    const fetchSellerReviews = async () => {
+      try {
+        setIsLoadingReviews(true);
+        const res = await api.get(
+          `/reviews/user/${data.seller._id}/stats?type=BUYER_TO_SELLER`,
+        );
+        setReviews(res.data.data.reviews || []);
+        setReviewStats(res.data.data.stats || null);
+      } catch (error) {
+        console.error("Lỗi khi lấy đánh giá người bán:", error);
+      } finally {
+        setIsLoadingReviews(false);
+      }
+    };
+
+    fetchSellerReviews();
+  }, [data?.seller?._id]);
   useEffect(() => {
     if (!identity) return;
     const fetchProduct = async () => {
@@ -569,18 +607,26 @@ export default function ProductDetail() {
                       </div>
                     </div>
                     <div className="text-center shrink-0 ml-3">
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-gray-800 text-sm">
-                          {data.seller.soldCount ?? 5}
-                        </span>
-                        <Star
-                          size={13}
-                          className="text-yellow-400 fill-yellow-400"
-                        />
-                      </div>
-                      <div className="text-[10px] text-gray-400">
-                        {data.seller.reviewCount ?? 0} đánh giá
-                      </div>
+                      {reviewStats && reviewStats.totalCount > 0 ? (
+                        <>
+                          <div className="flex items-center gap-1 justify-center">
+                            <span className="font-bold text-gray-800 text-sm">
+                              {reviewStats.avgRating.toFixed(1)}
+                            </span>
+                            <Star
+                              size={13}
+                              className="text-yellow-400 fill-yellow-400"
+                            />
+                          </div>
+                          <div className="text-[10px] text-gray-400">
+                            {reviewStats.totalCount} đánh giá
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-[11px] text-gray-400 max-w-[70px] leading-tight">
+                          Chưa có đánh giá nào
+                        </div>
+                      )}
                     </div>
                   </Link>
                 </div>
