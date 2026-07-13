@@ -149,9 +149,7 @@ export default function ProductDetail() {
     const fetchSellerReviews = async () => {
       try {
         setIsLoadingReviews(true);
-        const res = await api.get(
-          `/reviews/user/${data.seller._id}/stats?type=BUYER_TO_SELLER`,
-        );
+        const res = await api.get(`/reviews/user/${data.seller._id}/stats`);
         setReviews(res.data.data.reviews || []);
         setReviewStats(res.data.data.stats || null);
       } catch (error) {
