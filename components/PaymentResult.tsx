@@ -58,7 +58,7 @@ export default function PaymentResultClient() {
           setStatus("success");
 
           setOrderData({
-            amount: Number(params.vnp_Amount || 0),
+            amount: Number(params.vnp_Amount || 0) / 100,
             txnRef: params.vnp_TxnRef || "",
             bankCode: params.vnp_BankCode || "VNPay",
           });
